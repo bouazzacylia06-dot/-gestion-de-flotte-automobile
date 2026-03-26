@@ -1,0 +1,42 @@
+# NOTE : Kafka déployé via docker-compose.kafka.yml (voir même dossier) en raison d'un blocage réseau sur Docker Hub depuis Minikube.
+# L'image confluentinc/cp-kafka:7.6.0 est utilisée à la place de bitnami/kafka.
+
+image:
+  tag: 3.7.1-debian-12-r0 
+kraft:
+  enabled: true
+
+broker:
+  replicaCount: 1               
+
+persistence:
+  enabled: true
+  size: 2Gi
+
+resources:
+  requests:
+    memory: 512Mi
+    cpu: 250m
+  limits:
+    memory: 1Gi
+    cpu: 500m
+
+
+provisioning:
+  enabled: true
+  topics:
+    - name: vehicule
+      partitions: 1
+      replicationFactor: 1
+    - name: conducteur
+      partitions: 1
+      replicationFactor: 1
+    - name: maintenance
+      partitions: 1
+      replicationFactor: 1
+    - name: localisation
+      partitions: 1
+      replicationFactor: 1
+    - name: alerte
+      partitions: 1
+      replicationFactor: 1

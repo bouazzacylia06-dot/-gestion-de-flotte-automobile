@@ -1,0 +1,14 @@
+{
+  "name": "gestion-flotte-gateway",
+  "version": "1.0.0",
+  "description": "GraphQL Gateway for Gestion Flotte microservices",
+  "main": "gestion-flotte.js",
+  "scripts": {
+    "start": "node gestion-flotte.js"
+  },
+  "dependencies": {
+    "apollo-server": "^3.12.0",
+    "graphql": "^16.8.1",
+    "axios": "^1.6.0"
+  }
+}

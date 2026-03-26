@@ -1,0 +1,12 @@
+loki:
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: 2020-10-01
+        store: boltdb-shipper
+        object_store: filesystem
+        schema: v11
+        index:
+          prefix: index_
+          period: 24h
