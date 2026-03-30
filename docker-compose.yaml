@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  vehicle-service:
+    build: ./vehicule-service
+    ports:
+      - "3000:3000"
+
+  driver-service:
+    build: ./conducteur-service
+    ports:
+      - "3001:3001"
+
+  maintenance-service:
+    build: ./maintenance-service
+    ports:
+      - "3002:3002"
+
+  location-service:
+    build: ./localisation-service
+    ports:
+      - "3003:3003"
+
+  event-service:
+    build: ./evenement-service
+    ports:
+      - "3004:3004"
+
