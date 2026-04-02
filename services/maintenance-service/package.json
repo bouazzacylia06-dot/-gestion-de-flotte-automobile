@@ -3,23 +3,43 @@
   "version": "1.0.0",
   "description": "Microservice pour la gestion des maintenances",
   "main": "src/app.js",
-  "directories": {
-    "test": "tests"
-  },
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node --require ./src/observability/telemetry.js src/app.js",
+    "dev": "nodemon --require ./src/observability/telemetry.js src/app.js",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.48.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.52.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.52.1",
+    "@opentelemetry/resources": "^1.25.1",
+    "@opentelemetry/sdk-metrics": "^1.25.1",
+    "@opentelemetry/sdk-node": "^0.52.1",
+    "@opentelemetry/semantic-conventions": "^1.25.1",
+    "axios": "^1.6.5",
     "body-parser": "^1.20.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.13.1",
+    "pino": "^9.0.0",
+    "pino-http": "^10.0.0",
+    "pino-pretty": "^11.0.0"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "^3.0.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ]
   },
   "author": "BOUAZZA Cylia & FRANÇOIS Loïc",
   "license": "ISC"
 }
-

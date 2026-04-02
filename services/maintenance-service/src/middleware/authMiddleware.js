@@ -1,5 +1,6 @@
 /**
  * Middleware d'authentification JWT Keycloak
+ * Vérifie et décode le token JWT du header Authorization
  */
 
 const jwt = require('jsonwebtoken');
@@ -11,35 +12,50 @@ const JWKS_URL = `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-conne
 
 let cachedKeys = null;
 let keysFetchedAt = 0;
-const CACHE_DURATION = 3600000;
+const CACHE_DURATION = 3600000; // 1 heure
 
+/**
+ * Récupère les clés publiques depuis Keycloak
+ */
 async function getPublicKeys() {
   const now = Date.now();
-
+  
   if (cachedKeys && (now - keysFetchedAt) < CACHE_DURATION) {
     return cachedKeys;
   }
 
-  const response = await axios.get(JWKS_URL);
-  cachedKeys = response.data.keys;
-  keysFetchedAt = now;
-  return cachedKeys;
+  try {
+    const response = await axios.get(JWKS_URL);
+    cachedKeys = response.data.keys;
+    keysFetchedAt = now;
+    return cachedKeys;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des clés Keycloak:', error.message);
+    throw new Error('Unable to fetch Keycloak public keys');
+  }
 }
 
+/**
+ * Récupère la clé de signature pour vérifier le JWT
+ */
 function getSigningKey(header, keys) {
-  const key = keys.find((item) => item.kid === header.kid);
-
+  const key = keys.find((k) => k.kid === header.kid);
   if (!key) {
     throw new Error('Unable to find matching key');
   }
-
-  return `-----BEGIN CERTIFICATE-----\n${key.x5c[0]}\n-----END CERTIFICATE-----`;
+  
+  const cert = `-----BEGIN CERTIFICATE-----\n${key.x5c[0]}\n-----END CERTIFICATE-----`;
+  return cert;
 }
 
+/**
+ * Middleware d'authentification
+ */
 async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
-
-  if (req.originalUrl === '/' && req.method === 'GET') {
+  
+  // Routes publiques : health checks
+  if (['/', '/health', '/ready'].includes(req.originalUrl) && req.method === 'GET') {
     return next();
   }
 
@@ -50,24 +66,33 @@ async function authenticate(req, res, next) {
     });
   }
 
-  const token = authHeader.slice(7);
+  const token = authHeader.substring(7);
 
   try {
     const keys = await getPublicKeys();
     const decoded = jwt.decode(token, { complete: true });
-
     if (!decoded) {
       throw new Error('Invalid token format');
     }
 
     const signingKey = getSigningKey(decoded.header, keys);
-    jwt.verify(token, signingKey, {
+    const verified = jwt.verify(token, signingKey, {
       issuer: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
-      audience: ['account', process.env.KEYCLOAK_CLIENT_ID || 'Service-conducteurs'],
+      audience: ['account', process.env.KEYCLOAK_CLIENT_ID || 'maintenance-service'],
     });
 
-    return next();
+    req.user = {
+      id: verified.sub,
+      keycloakId: verified.sub,
+      username: verified.preferred_username,
+      email: verified.email,
+      roles: verified.realm_access?.roles || [],
+      clientRoles: verified.resource_access?.[process.env.KEYCLOAK_CLIENT_ID || 'maintenance-service']?.roles || [],
+    };
+
+    next();
   } catch (error) {
+    console.error('Erreur de vérification du token:', error.message);
     return res.status(401).json({
       message: 'Authentication failed',
       error: error.message,
@@ -75,6 +100,30 @@ async function authenticate(req, res, next) {
   }
 }
 
+/**
+ * Middleware d'autorisation par rôles
+ */
+function authorize(...requiredRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const userRoles = [...req.user.roles, ...req.user.clientRoles];
+    const hasRole = requiredRoles.some((role) => userRoles.includes(role));
+
+    if (!hasRole) {
+      return res.status(403).json({
+        message: 'Authorization failed',
+        error: `Required one of: ${requiredRoles.join(', ')}`,
+      });
+    }
+
+    next();
+  };
+}
+
 module.exports = {
   authenticate,
+  authorize,
 };
