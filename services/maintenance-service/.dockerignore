@@ -1,0 +1,11 @@
+﻿Set-Content -Path "services/maintenance-service/.dockerignore" -Value @"
+.git
+.gitignore
+Dockerfile
+npm-debug.log
+dist
+coverage
+logs
+.env
+"@
+

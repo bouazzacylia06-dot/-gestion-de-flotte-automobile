@@ -1,51 +1,52 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: maintenance-service
   namespace: maintenance-ns
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: maintenance-service
-      version: v1.0.0
   template:
     metadata:
       labels:
         app: maintenance-service
-        version: v1.0.0
     spec:
       containers:
-        - name: maintenance-service
-          image: maintenance-service:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 30002
-          env:
-            - name: APP_PORT
-              value: "3002"
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: db-secrets
-                  key: url
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 3002
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 3002
-            initialDelaySeconds: 5
-            periodSeconds: 5
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "200m"
-              memory: "256Mi"
+      - name: maintenance-service
+        image: maintenance-service:latest
+        imagePullPolicy: Never
+
+        # === VARIABLES D'ENVIRONNEMENT ===
+        env:
+        - name: KAFKA_BROKER
+          value: "kafka:9092"
+
+        ports:
+        - containerPort: 3002
+          protocol: TCP
+
+        # === READINESS PROBE ===
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3002
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+
+        # === LIVENESS PROBE ===
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+
+      restartPolicy: Always

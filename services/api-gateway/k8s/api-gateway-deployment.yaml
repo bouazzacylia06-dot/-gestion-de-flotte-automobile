@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: api-gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          env:
+            - name: APP_PORT
+              value: "4000"
+            - name: VEHICLE_SERVICE_URL
+              value: "http://vehicule-service.vehicule-ns.svc"
+            - name: DRIVER_SERVICE_URL
+              value: "http://conducteur-service.conducteur-ns.svc"
+            - name: MAINTENANCE_SERVICE_URL
+              value: "http://maintenance-service.maintenance-ns.svc"
+            - name: LOCATION_SERVICE_URL
+              value: "http://localisation-service.localisation-ns.svc"
+            - name: KEYCLOAK_URL
+              value: "http://keycloak.keycloak-ns.svc:8080"
+            - name: KEYCLOAK_REALM
+              value: "flotte-realm"
+            - name: KEYCLOAK_CLIENT_ID
+              value: "api-gateway"
+            - name: NODE_ENV
+              value: "production"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "384Mi"

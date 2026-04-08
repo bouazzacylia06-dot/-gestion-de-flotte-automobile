@@ -1,7 +1,7 @@
 const { Kafka, logLevel } = require('kafkajs');
 
 const parseBrokers = () => {
-  const raw = process.env.KAFKA_BROKERS || 'localhost:9092';
+const raw = process.env.KAFKA_BROKER || 'kafka:9092';
   return raw
     .split(',')
     .map((b) => b.trim())
@@ -10,7 +10,7 @@ const parseBrokers = () => {
 
 const kafka = new Kafka({
   clientId: process.env.KAFKA_CLIENT_ID || 'maintenance-service',
-  brokers: parseBrokers(),
+brokers: [process.env.KAFKA_BROKER || "kafka:9092"],
   logLevel: logLevel.NOTHING,
 });
 
