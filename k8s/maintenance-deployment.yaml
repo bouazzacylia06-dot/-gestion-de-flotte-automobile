@@ -1,17 +1,30 @@
+<<<<<<< HEAD
 ﻿apiVersion: apps/v1
+=======
+apiVersion: apps/v1
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
 kind: Deployment
 metadata:
   name: maintenance-service
   namespace: maintenance-ns
 spec:
+<<<<<<< HEAD
   replicas: 1
   selector:
     matchLabels:
       app: maintenance-service
+=======
+  replicas: 2
+  selector:
+    matchLabels:
+      app: maintenance-service
+      version: v1.0.0
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
   template:
     metadata:
       labels:
         app: maintenance-service
+<<<<<<< HEAD
     spec:
       containers:
       - name: maintenance-service
@@ -50,3 +63,41 @@ spec:
           failureThreshold: 3
 
       restartPolicy: Always
+=======
+        version: v1.0.0
+    spec:
+      containers:
+        - name: maintenance-service
+          image: maintenance-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 30002
+          env:
+            - name: APP_PORT
+              value: "3002"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: url
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f

@@ -172,10 +172,13 @@ DATABASE_URL=postgresql://utilisateur_flotte:<MOT_DE_PASSE>@postgresql.flotte-in
 
 ## Topics Kafka
 
+<<<<<<< HEAD
 Convention retenue :
 - **Topic métier (pluriel)** : `vehicules`, `conducteurs`, `maintenances`, `localisations`, `alertes`
 - **Type d'événement (payload)** : `entite.action` (exemples : `vehicule.cree`, `vehicule.modifie`, `vehicule.supprime`)
 
+=======
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
 Les topics sont créés manuellement au premier démarrage si besoin :
 
 ```bash
@@ -191,7 +194,11 @@ docker exec kafka kafka-topics \
 
 docker exec kafka kafka-topics \
   --bootstrap-server localhost:9092 \
+<<<<<<< HEAD
   --create --topic maintenances \
+=======
+  --create --topic maintenance \
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
   --partitions 1 --replication-factor 1
 
 docker exec kafka kafka-topics \

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 require('dotenv').config();
 
 const express = require('express');
@@ -20,12 +21,21 @@ const port = Number(process.env.APP_PORT || 3001);
 // Middleware
 app.use(express.json());
 app.use(cors());
+=======
+const express = require('express');
+const app = express();
+const port = 3001;
+
+// Middleware
+app.use(express.json());
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
 
 // Route de base
 app.get('/', (req, res) => {
   res.send('Service Conducteur - Microservice de gestion des conducteurs');
 });
 
+<<<<<<< HEAD
 const READ_ROLES = ['Admin', 'Conducteur', 'Technicien'];
 const WRITE_ROLES = ['Admin', 'Technicien'];
 
@@ -56,6 +66,8 @@ app.use((err, req, res, next) => {
   });
 });
 
+=======
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
 // Démarrage du serveur
 app.listen(port, () => {
   console.log(`Service Conducteur démarré sur le port ${port}`);

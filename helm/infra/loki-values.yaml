@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 deploymentMode: SingleBinary
 
 loki:
@@ -20,3 +21,17 @@ write:
   replicas: 0
 backend:
   replicas: 0
+=======
+loki:
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: 2020-10-01
+        store: boltdb-shipper
+        object_store: filesystem
+        schema: v11
+        index:
+          prefix: index_
+          period: 24h
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f

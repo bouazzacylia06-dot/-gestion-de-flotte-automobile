@@ -26,3 +26,19 @@ services:
     ports:
       - "3004:3004"
 
+<<<<<<< HEAD
+=======
+  gestion-flotte-gateway:
+    build:
+      context: .
+      dockerfile: gestion-flotte.Dockerfile
+    ports:
+      - "4000:4000"
+    depends_on:
+      - vehicle-service
+      - driver-service
+      - maintenance-service
+      - location-service
+      - event-service
+
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f

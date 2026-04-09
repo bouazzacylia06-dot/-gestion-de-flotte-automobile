@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 require('dotenv').config();
 
 const express = require('express');
@@ -81,3 +82,22 @@ process.on('SIGTERM', () => {
 });
 
 module.exports = app;
+=======
+const express = require('express');
+const app = express();
+const port = 3002;
+
+// Middleware
+app.use(express.json());
+
+// Route de base
+app.get('/', (req, res) => {
+  res.send('Service Maintenance - Microservice de gestion des maintenance');
+});
+
+// Démarrage du serveur
+app.listen(port, () => {
+  console.log(`Service Maintenance démarré sur le port ${port}`);
+});
+
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f

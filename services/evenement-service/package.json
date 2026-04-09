@@ -7,6 +7,7 @@
     "test": "tests"
   },
   "scripts": {
+<<<<<<< HEAD
     "start": "node --require ./src/observability/telemetry.js src/app.js",
     "dev": "NODE_OPTIONS=--require=./src/observability/telemetry.js nodemon src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -30,6 +31,16 @@
     "pino": "^8.17.2",
     "pino-http": "^8.6.1",
     "pino-pretty": "^11.2.2"
+=======
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5"
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

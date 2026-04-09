@@ -109,9 +109,13 @@ CREATE TABLE IF NOT EXISTS service_conducteurs.drivers (
     -- Unique constraint on keycloak_id for SSO link
     CONSTRAINT uk_drivers_keycloak_id UNIQUE (keycloak_id),
     -- Unique constraint on license number
+<<<<<<< HEAD
     CONSTRAINT uk_drivers_numero_permis UNIQUE (numéro_permis),
     -- Unique constraint on phone number
     CONSTRAINT uk_drivers_telephone UNIQUE (téléphone)
+=======
+    CONSTRAINT uk_drivers_numero_permis UNIQUE (numéro_permis)
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
 );
 
 -- Create index on keycloak_id for SSO lookups

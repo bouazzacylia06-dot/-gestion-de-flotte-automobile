@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 require('dotenv').config();
 
 const express = require('express');
@@ -13,10 +14,18 @@ const { httpLogger } = require('./observability/logger');
 
 // Middleware
 app.use(httpLogger); // Instrumentation HTTP automatique avec logs corrélés
+=======
+const express = require('express');
+const app = express();
+const port = 3004;
+
+// Middleware
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
 app.use(express.json());
 
 // Route de base
 app.get('/', (req, res) => {
+<<<<<<< HEAD
   logger.info({ service: 'evenement-service' }, 'Health check route accessed');
   res.send('Service Évènements - Microservice de gestion des évènements');
 });
@@ -79,3 +88,13 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 start();
 
+=======
+  res.send('Service Évènements - Microservice de gestion des évènements');
+});
+
+// Démarrage du serveur
+app.listen(port, () => {
+  console.log(`Service Évènements démarré sur le port ${port}`);
+});
+
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f

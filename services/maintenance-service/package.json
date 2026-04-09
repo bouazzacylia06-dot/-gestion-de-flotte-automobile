@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Microservice pour la gestion des maintenances",
   "main": "src/app.js",
+<<<<<<< HEAD
   "scripts": {
     "start": "node --require ./src/observability/telemetry.js src/app.js",
     "dev": "nodemon --require ./src/observability/telemetry.js src/app.js",
@@ -43,3 +44,25 @@
   "author": "BOUAZZA Cylia & FRANÇOIS Loïc",
   "license": "ISC"
 }
+=======
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "author": "BOUAZZA Cylia & FRANÇOIS Loïc",
+  "license": "ISC"
+}
+
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f

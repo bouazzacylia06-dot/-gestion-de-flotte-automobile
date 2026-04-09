@@ -25,6 +25,7 @@ resources:
 provisioning:
   enabled: true
   topics:
+<<<<<<< HEAD
     - name: vehicules
       partitions: 1
       replicationFactor: 1
@@ -38,5 +39,20 @@ provisioning:
       partitions: 1
       replicationFactor: 1
     - name: alertes
+=======
+    - name: vehicule
+      partitions: 1
+      replicationFactor: 1
+    - name: conducteur
+      partitions: 1
+      replicationFactor: 1
+    - name: maintenance
+      partitions: 1
+      replicationFactor: 1
+    - name: localisation
+      partitions: 1
+      replicationFactor: 1
+    - name: alerte
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
       partitions: 1
       replicationFactor: 1

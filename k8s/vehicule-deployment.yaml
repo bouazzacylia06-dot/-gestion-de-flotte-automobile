@@ -24,12 +24,15 @@ spec:
           env:
             - name: APP_PORT
               value: "3000"
+<<<<<<< HEAD
             - name: KAFKA_BROKERS
               value: "192.168.49.1:9092"
             - name: KAFKA_TOPIC_VEHICULES
               value: "vehicules"
             - name: KAFKA_CLIENT_ID
               value: "vehicule-service"
+=======
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

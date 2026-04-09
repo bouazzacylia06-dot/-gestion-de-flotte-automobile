@@ -24,6 +24,7 @@ spec:
           env:
             - name: APP_PORT
               value: "3004"
+<<<<<<< HEAD
             - name: KAFKA_BROKERS
               value: "192.168.49.1:9092"
             - name: KAFKA_TOPIC_VEHICULES
@@ -32,6 +33,8 @@ spec:
               value: "evenement-service"
             - name: KAFKA_GROUP_ID
               value: "evenement-service-group"
+=======
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

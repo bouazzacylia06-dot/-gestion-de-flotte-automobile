@@ -1,13 +1,21 @@
+<<<<<<< HEAD
 image:
   repository: otel/opentelemetry-collector-contrib
 
 mode: deployment
+=======
+mode: deployment
+image:
+  repository: otel/opentelemetry-collector
+  tag: "0.95.0"
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
 
 config:
   receivers:
     otlp:
       protocols:
         grpc:
+<<<<<<< HEAD
           endpoint: 0.0.0.0:4317
         http:
           endpoint: 0.0.0.0:4318
@@ -27,12 +35,30 @@ config:
       tls:
         insecure: true
 
+=======
+        http:
+  processors:
+    batch:
+  exporters:
+    jaeger:
+      endpoint: "jaeger-collector:4317"
+      tls:
+        insecure: true
+    prometheus:
+      endpoint: "0.0.0.0:8889"
+    loki:
+      endpoint: "http://loki:3100/loki/api/v1/push"
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
   service:
     pipelines:
       traces:
         receivers: [otlp]
         processors: [batch]
+<<<<<<< HEAD
         exporters: [otlp/jaeger]
+=======
+        exporters: [jaeger]
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
       metrics:
         receivers: [otlp]
         processors: [batch]
@@ -40,4 +66,9 @@ config:
       logs:
         receivers: [otlp]
         processors: [batch]
+<<<<<<< HEAD
         exporters: [otlphttp/loki]
+=======
+        exporters: [loki]
+
+>>>>>>> f6744b537b40886e59861b781c122c56d941867f
