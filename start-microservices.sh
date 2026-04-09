@@ -18,25 +18,25 @@ sleep 30
 
 # 4. Appliquer les namespaces
 echo "📁 Création des namespaces..."
-kubectl apply -f ../TP2/k8s/namespaces.yaml
+kubectl apply -f k8s/namespaces.yaml
 
 # 5. Appliquer les deployments et services
 echo "🚀 Création des deployments et services..."
-kubectl apply -f ../TP2/k8s/vehicule-deployment.yaml
-kubectl apply -f ../TP2/k8s/conducteur-deployment.yaml
-kubectl apply -f ../TP2/k8s/maintenance-deployment.yaml
-kubectl apply -f ../TP2/k8s/localisation-deployment.yaml
-kubectl apply -f ../TP2/k8s/evenement-deployment.yaml
+kubectl apply -f k8s/vehicule-deployment.yaml
+kubectl apply -f k8s/conducteur-deployment.yaml
+kubectl apply -f k8s/maintenance-deployment.yaml
+kubectl apply -f k8s/localisation-deployment.yaml
+kubectl apply -f k8s/evenement-deployment.yaml
 
-kubectl apply -f ../TP2/k8s/vehicule-service.yaml
-kubectl apply -f ../TP2/k8s/conducteur-service.yaml
-kubectl apply -f ../TP2/k8s/maintenance-service.yaml
-kubectl apply -f ../TP2/k8s/localisation-service.yaml
-kubectl apply -f ../TP2/k8s/evenement-service.yaml
+kubectl apply -f k8s/vehicule-service.yaml
+kubectl apply -f k8s/conducteur-service.yaml
+kubectl apply -f k8s/maintenance-service.yaml
+kubectl apply -f k8s/localisation-service.yaml
+kubectl apply -f k8s/evenement-service.yaml
 
 # 6. Appliquer l'Ingress (avec validation désactivée)
 echo "🌐 Configuration de l'Ingress..."
-kubectl apply -f ../TP2/k8s/ingress.yaml --validate=false
+kubectl apply -f k8s/ingress.yaml --validate=false
 
 # 7. Instructions pour l'utilisateur
 echo ""
