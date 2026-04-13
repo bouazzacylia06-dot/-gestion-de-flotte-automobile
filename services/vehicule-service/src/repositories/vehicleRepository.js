@@ -142,6 +142,22 @@ const remove = async (id) => {
   return rowCount > 0;
 };
 
+const updateStatus = async (id, statut) => {
+  const query = `
+    UPDATE service_vehicles.vehicles
+    SET statut = $2::vehicle_status_enum
+    WHERE id = $1::uuid
+    RETURNING
+      id::text AS id,
+      immatriculation,
+      marque,
+      "modèle" AS modele,
+      statut::text AS statut
+  `;
+  const { rows } = await pool.query(query, [id, statut]);
+  return rows.length > 0 ? mapRowToVehicle(rows[0]) : null;
+};
+
 module.exports = {
   findAll,
   findById,
@@ -149,4 +165,5 @@ module.exports = {
   create,
   update,
   remove,
+  updateStatus,
 };

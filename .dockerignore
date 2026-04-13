@@ -1,0 +1,7 @@
+node_modules
+npm-debug.log
+services/
+helm/
+k8s/
+docs/
+.env

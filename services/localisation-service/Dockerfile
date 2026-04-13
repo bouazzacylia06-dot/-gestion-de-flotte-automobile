@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Installer les dépendances
-RUN npm install --production
+RUN npm ci --only=production
 
 # Copier le reste du projet
 COPY . .
@@ -29,8 +29,10 @@ COPY --from=builder --chown=nodejs:nodejs /app .
 # Définir l'utilisateur non-root
 USER nodejs
 
-# Exposer le port sur lequel l'application écoute
+# Port HTTP — REST API + /health (API Gateway + Docker healthcheck)
 EXPOSE 3003
+# Port gRPC — streaming GPS bidirectionnel (traceurs embarqués)
+EXPOSE 50051
 
 # Commande pour démarrer l'application
 CMD ["node", "src/app.js"]

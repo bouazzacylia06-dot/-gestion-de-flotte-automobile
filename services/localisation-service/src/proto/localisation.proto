@@ -1,0 +1,78 @@
+// =============================================================================
+// localisation.proto — Contrat gRPC du Service Localisation
+// Gestion de Flotte Automobile — M1 GIL, Université de Rouen
+//
+// Ce fichier est LE contrat entre tous les clients gRPC et le service.
+// Toute modification doit être rétro-compatible ou versionnée.
+// =============================================================================
+
+syntax = "proto3";
+
+package localisation;
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+
+// Trame GPS brute envoyée par un traceur embarqué (toutes les 2 s en prod).
+message GPSData {
+  string vehicle_id     = 1;  // UUID du véhicule (requis)
+  double latitude       = 2;  // Latitude décimale  [-90.0, +90.0]
+  double longitude      = 3;  // Longitude décimale [-180.0, +180.0]
+  float  speed          = 4;  // Vitesse en km/h (≥ 0) ; > 250 → rejeté
+  float  heading        = 5;  // Cap en degrés [0, 360)  — 0 = Nord
+  int64  timestamp      = 6;  // Epoch Unix en millisecondes (UTC)
+  string correlation_id = 7;  // ID de corrélation pour la traçabilité distribuée
+}
+
+// Acquittement immédiat renvoyé par le serveur pour chaque trame reçue.
+message PositionAck {
+  string vehicle_id     = 1;  // UUID du véhicule
+  bool   accepted       = 2;  // true = position valide et persistée en DB
+  string reason         = 3;  // Motif de rejet (vide si accepted=true)
+  int64  timestamp      = 4;  // Epoch de la position ACKée
+  string correlation_id = 5;  // Reprend le correlation_id de GPSData
+}
+
+// Requête pour récupérer un historique de positions.
+message HistoryRequest {
+  string vehicle_id = 1;  // UUID du véhicule (requis)
+  int64  from       = 2;  // Début de la plage — epoch ms (0 = 24h avant now)
+  int64  to         = 3;  // Fin de la plage   — epoch ms (0 = now)
+  int32  limit      = 4;  // Nombre max de résultats (0 = pas de limite)
+}
+
+// Résumé d'un trajet : dernière position + métriques calculées.
+message PositionSummary {
+  string  vehicle_id        = 1;
+  GPSData last_position     = 2;  // Dernière position valide connue
+  int32   total_positions   = 3;  // Nombre de positions dans la plage
+  double  total_distance_km = 4;  // Distance cumulée (formule Haversine, en km)
+}
+
+// ─── Service ──────────────────────────────────────────────────────────────────
+
+service LocalisationService {
+
+  // ── Streaming bidirectionnel ──────────────────────────────────────────────
+  // Le traceur GPS envoie des trames en continu (toutes les 2 s).
+  // Le serveur ACK chaque trame immédiatement :
+  //   - accepted=true  → position validée, stockée dans TimescaleDB, géofencing vérifié
+  //   - accepted=false → trame rejetée (coordonnées hors-bornes, vitesse > 250 km/h…)
+  // La connexion reste ouverte pendant toute la durée du trajet.
+  rpc StreamGPSPosition (stream GPSData) returns (stream PositionAck);
+
+  // ── Server-side streaming ─────────────────────────────────────────────────
+  // Renvoie l'historique des positions d'un véhicule depuis TimescaleDB.
+  // Les positions sont renvoyées en ordre chronologique (ASC).
+  // Utile pour rejouer un trajet ou alimenter une carte.
+  rpc GetPositionHistory (HistoryRequest) returns (stream GPSData);
+
+  // ── Unaire : dernière position ─────────────────────────────────────────────
+  // Retourne la position la plus récente connue pour un véhicule.
+  // Renvoie NOT_FOUND si le véhicule n'a encore jamais envoyé de position.
+  rpc GetLastPosition (HistoryRequest) returns (GPSData);
+
+  // ── Unaire : résumé de trajet ─────────────────────────────────────────────
+  // Calcule la distance totale parcourue et le nombre de positions enregistrées
+  // dans la plage [from, to]. Utilise la formule de Haversine.
+  rpc GetPositionSummary (HistoryRequest) returns (PositionSummary);
+}

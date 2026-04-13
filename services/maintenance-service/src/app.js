@@ -1,95 +1,57 @@
 const express = require('express');
+const cors = require('cors');
+const maintenanceController = require('./controllers/maintenanceController');
+const { validateMaintenanceId, validateMaintenancePayload } = require('./middleware/maintenanceValidation');
+const { authenticate, requireRole } = require('./middleware/authMiddleware');
+const kafkaProducer = require('./kafka/producer');
+const kafkaConsumer = require('./kafka/consumer');
+const { startGeoAlertsConsumer } = require('./kafka/geoAlertsConsumer');
+
 const app = express();
 const port = 3002;
 
-// Middleware
 app.use(express.json());
+app.use(cors());
 
-let maintenanceItems = [];
-let nextId = 1;
-
-function isMaintenancePayloadValid(payload) {
-  return (
-    payload &&
-    typeof payload.vehicleId === 'string' &&
-    typeof payload.date === 'string' &&
-    typeof payload.type === 'string' &&
-    typeof payload.status === 'string' &&
-    typeof payload.cost === 'number'
-  );
-}
-
-// Route de base
-app.get('/', (req, res) => {
-  res.send('Service Maintenance - Microservice de gestion des maintenance');
+app.get('/', (_req, res) => {
+  res.send('Service Maintenance - Microservice de gestion des maintenances');
 });
 
-app.get('/maintenance', (req, res) => {
-  res.status(200).json(maintenanceItems);
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'maintenance-service' });
 });
 
-app.post('/maintenance', (req, res) => {
-  if (!isMaintenancePayloadValid(req.body)) {
-    return res.status(400).json({ error: 'Payload maintenance invalide' });
+// Lecture — tout utilisateur authentifié
+app.get('/maintenance', authenticate, maintenanceController.getMaintenances);
+app.get('/maintenance/:id', authenticate, validateMaintenanceId, maintenanceController.getMaintenanceById);
+
+// Écriture — manager ou admin
+app.post('/maintenance', authenticate, requireRole('admin', 'manager', 'technicien'), validateMaintenancePayload, maintenanceController.createMaintenance);
+app.put('/maintenance/:id', authenticate, requireRole('admin', 'manager', 'technicien'), validateMaintenanceId, validateMaintenancePayload, maintenanceController.updateMaintenance);
+
+// Suppression — admin uniquement
+app.delete('/maintenance/:id', authenticate, requireRole('admin'), validateMaintenanceId, maintenanceController.deleteMaintenance);
+
+app.use((_req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+app.use((err, _req, res, _next) => {
+  const status = err.status || 500;
+  res.status(status).json({ message: err.message || 'Internal server error' });
+});
+
+const startKafka = async () => {
+  try {
+    await kafkaProducer.connect();
+    await kafkaConsumer.start();
+    await startGeoAlertsConsumer();
+  } catch (err) {
+    console.error('[Kafka] Erreur de connexion (non bloquant):', err.message);
   }
+};
 
-  const maintenance = {
-    id: req.body.id || String(nextId++),
-    vehicleId: req.body.vehicleId,
-    date: req.body.date,
-    type: req.body.type,
-    status: req.body.status,
-    cost: req.body.cost,
-  };
-
-  maintenanceItems.push(maintenance);
-  return res.status(201).json(maintenance);
-});
-
-app.get('/maintenance/:id', (req, res) => {
-  const maintenance = maintenanceItems.find((item) => item.id === req.params.id);
-  if (!maintenance) {
-    return res.status(404).json({ error: 'Maintenance introuvable' });
-  }
-
-  return res.status(200).json(maintenance);
-});
-
-app.put('/maintenance/:id', (req, res) => {
-  if (!isMaintenancePayloadValid(req.body)) {
-    return res.status(400).json({ error: 'Payload maintenance invalide' });
-  }
-
-  const itemIndex = maintenanceItems.findIndex((item) => item.id === req.params.id);
-  if (itemIndex === -1) {
-    return res.status(404).json({ error: 'Maintenance introuvable' });
-  }
-
-  const updatedMaintenance = {
-    id: req.params.id,
-    vehicleId: req.body.vehicleId,
-    date: req.body.date,
-    type: req.body.type,
-    status: req.body.status,
-    cost: req.body.cost,
-  };
-
-  maintenanceItems[itemIndex] = updatedMaintenance;
-  return res.status(200).json(updatedMaintenance);
-});
-
-app.delete('/maintenance/:id', (req, res) => {
-  const itemIndex = maintenanceItems.findIndex((item) => item.id === req.params.id);
-  if (itemIndex === -1) {
-    return res.status(404).json({ error: 'Maintenance introuvable' });
-  }
-
-  maintenanceItems.splice(itemIndex, 1);
-  return res.status(204).send();
-});
-
-// Démarrage du serveur
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Service Maintenance démarré sur le port ${port}`);
+  await startKafka();
 });
-

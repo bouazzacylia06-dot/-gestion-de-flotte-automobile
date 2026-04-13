@@ -1,0 +1,72 @@
+{
+  "realm": "flotte",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 3600,
+  "roles": {
+    "realm": [
+      { "name": "admin",       "description": "Administrateur système" },
+      { "name": "manager",     "description": "Gestionnaire de flotte" },
+      { "name": "technicien",  "description": "Technicien maintenance" },
+      { "name": "utilisateur", "description": "Utilisateur standard" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "flotte-app",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:*", "*"],
+      "webOrigins": ["*"],
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email"]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin@flotte.local",
+      "firstName": "Admin",
+      "lastName": "Système",
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "manager",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "manager@flotte.local",
+      "firstName": "Manager",
+      "lastName": "Flotte",
+      "credentials": [{ "type": "password", "value": "manager123", "temporary": false }],
+      "realmRoles": ["manager"]
+    },
+    {
+      "username": "technicien",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "tech@flotte.local",
+      "firstName": "Technicien",
+      "lastName": "Maintenance",
+      "credentials": [{ "type": "password", "value": "tech123", "temporary": false }],
+      "realmRoles": ["technicien"]
+    },
+    {
+      "username": "utilisateur",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "user@flotte.local",
+      "firstName": "Utilisateur",
+      "lastName": "Standard",
+      "credentials": [{ "type": "password", "value": "user123", "temporary": false }],
+      "realmRoles": ["utilisateur"]
+    }
+  ]
+}

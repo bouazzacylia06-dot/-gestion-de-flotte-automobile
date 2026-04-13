@@ -1,25 +1,47 @@
 {
-  "name": "localisations-service",
-  "version": "1.0.0",
-  "description": "Microservice pour la gestion des localisations",
+  "name": "localisation-service",
+  "version": "2.0.0",
+  "description": "Service Localisation — gRPC streaming GPS, TimescaleDB, GeoFencing Kafka",
   "main": "src/app.js",
-  "directories": {
-    "test": "tests"
-  },
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start":          "node src/app.js",
+    "dev":            "nodemon src/app.js",
+    "test":           "jest --coverage",
+    "test:unit":      "jest tests/unit --verbose",
+    "test:integration": "jest tests/integration --verbose",
+    "test:ci":        "jest --coverage --coverageReporters=lcov text-summary",
+    "simulate":       "node gps-simulator.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5"
+    "@grpc/grpc-js":    "^1.11.3",
+    "@grpc/proto-loader": "^0.7.13",
+    "cors":             "^2.8.5",
+    "express":          "^4.18.2",
+    "jsonwebtoken":     "^9.0.3",
+    "jwks-rsa":         "^3.2.2",
+    "kafkajs":          "^2.2.4",
+    "pg":               "^8.12.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "jest":     "^29.7.0",
+    "nodemon":  "^3.0.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout":     15000,
+    "testMatch":       ["**/tests/**/*.test.js"],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/app.js",
+      "!src/proto/**",
+      "!src/config/**",
+      "!src/kafka/**",
+      "!src/middleware/**"
+    ],
+    "coverageThreshold": {
+      "global": { "lines": 70, "functions": 70 }
+    }
   },
   "author": "BOUAZZA Cylia & FRANÇOIS Loïc",
   "license": "ISC"
 }
-

@@ -1,40 +1,47 @@
 const { ApolloServer } = require('apollo-server');
 const axios = require('axios');
 
+// URLs des services via noms Docker (fallback localhost pour dev local)
+const VEHICLE_URL   = process.env.VEHICLE_SERVICE_URL   || 'http://localhost:3000';
+const DRIVER_URL    = process.env.DRIVER_SERVICE_URL    || 'http://localhost:3001';
+const MAINT_URL     = process.env.MAINTENANCE_SERVICE_URL || 'http://localhost:3002';
+const LOCATION_URL  = process.env.LOCATION_SERVICE_URL  || 'http://localhost:3003';
+const EVENT_URL     = process.env.EVENT_SERVICE_URL     || 'http://localhost:3004';
+
 const typeDefs = `#graphql
-  type Driver {
+  # --- Véhicule ---
+  type Vehicule {
     id: ID!
-    name: String!
-    license: String!
-    profile: Profile!
+    immatriculation: String!
+    marque: String!
+    modele: String!
+    statut: String!
   }
 
-  type Profile {
-    email: String!
-    phone: String!
+  input VehiculeInput {
+    immatriculation: String!
+    marque: String!
+    modele: String!
+    statut: String!
   }
 
-  type Vehicle {
+  # --- Conducteur ---
+  type Conducteur {
     id: ID!
-    make: String!
-    model: String!
-    availability: Boolean!
-    characteristics: Characteristics!
+    nom: String!
+    prenom: String!
+    numeroPermis: String!
+    statut: String!
   }
 
-  type Characteristics {
-    year: Int!
-    color: String!
-    capacity: Int!
+  input ConducteurInput {
+    nom: String!
+    prenom: String!
+    numeroPermis: String!
+    statut: String!
   }
 
-  type Location {
-    vehicleId: ID!
-    latitude: Float!
-    longitude: Float!
-    timestamp: String!
-  }
-
+  # --- Maintenance ---
   type Maintenance {
     id: ID!
     vehicleId: ID!
@@ -42,78 +49,6 @@ const typeDefs = `#graphql
     type: String!
     status: String!
     cost: Float!
-  }
-
-  type Reservation {
-    id: ID!
-    vehicleId: ID!
-    driverId: ID!
-    startDate: String!
-    endDate: String!
-  }
-
-  type Query {
-    drivers: [Driver!]!
-    driver(id: ID!): Driver
-    vehicles: [Vehicle!]!
-    vehicle(id: ID!): Vehicle
-    locations: [Location!]!
-    location(vehicleId: ID!): Location
-    maintenances: [Maintenance!]!
-    maintenance(id: ID!): Maintenance
-    reservations: [Reservation!]!
-    reservation(id: ID!): Reservation
-  }
-
-  type Mutation {
-    createDriver(input: DriverInput!): Driver!
-    updateDriver(id: ID!, input: DriverInput!): Driver!
-    deleteDriver(id: ID!): Boolean!
-    
-    createVehicle(input: VehicleInput!): Vehicle!
-    updateVehicle(id: ID!, input: VehicleInput!): Vehicle!
-    deleteVehicle(id: ID!): Boolean!
-    
-    createLocation(input: LocationInput!): Location!
-    
-    createMaintenance(input: MaintenanceInput!): Maintenance!
-    updateMaintenance(id: ID!, input: MaintenanceInput!): Maintenance!
-    deleteMaintenance(id: ID!): Boolean!
-    
-    createReservation(input: ReservationInput!): Reservation!
-    updateReservation(id: ID!, input: ReservationInput!): Reservation!
-    deleteReservation(id: ID!): Boolean!
-  }
-
-  input DriverInput {
-    name: String!
-    license: String!
-    profile: ProfileInput!
-  }
-
-  input ProfileInput {
-    email: String!
-    phone: String!
-  }
-
-  input VehicleInput {
-    make: String!
-    model: String!
-    availability: Boolean!
-    characteristics: CharacteristicsInput!
-  }
-
-  input CharacteristicsInput {
-    year: Int!
-    color: String!
-    capacity: Int!
-  }
-
-  input LocationInput {
-    vehicleId: ID!
-    latitude: Float!
-    longitude: Float!
-    timestamp: String!
   }
 
   input MaintenanceInput {
@@ -124,212 +59,219 @@ const typeDefs = `#graphql
     cost: Float!
   }
 
-  input ReservationInput {
-    vehicleId: ID!
-    driverId: ID!
-    startDate: String!
-    endDate: String!
+  # --- Localisation ---
+  type Localisation {
+    id: ID!
+    vehiculeId: ID!
+    latitude: Float!
+    longitude: Float!
+    speed: Float
+    heading: Float
+    timestamp: String!
+  }
+
+  input LocalisationInput {
+    vehiculeId: ID!
+    latitude: Float!
+    longitude: Float!
+    timestamp: String!
+  }
+
+  # --- Evenement ---
+  type Evenement {
+    id: ID!
+    vehiculeId: ID!
+    type: String!
+    description: String!
+    date: String!
+  }
+
+  input EvenementInput {
+    vehiculeId: ID!
+    type: String!
+    description: String!
+    date: String!
+  }
+
+  type Query {
+    vehicules: [Vehicule!]!
+    vehicule(id: ID!): Vehicule
+
+    conducteurs: [Conducteur!]!
+    conducteur(id: ID!): Conducteur
+
+    maintenances: [Maintenance!]!
+    maintenance(id: ID!): Maintenance
+
+    localisations: [Localisation!]!
+    localisation(id: ID!): Localisation
+    positionHistory(vehicleId: ID!, from: String, to: String, limit: Int): [Localisation!]!
+    vehiculeLastPosition(vehicleId: ID!): Localisation
+
+    evenements: [Evenement!]!
+    evenement(id: ID!): Evenement
+  }
+
+  type Mutation {
+    createVehicule(input: VehiculeInput!): Vehicule!
+    updateVehicule(id: ID!, input: VehiculeInput!): Vehicule!
+    deleteVehicule(id: ID!): Boolean!
+
+    createConducteur(input: ConducteurInput!): Conducteur!
+    updateConducteur(id: ID!, input: ConducteurInput!): Conducteur!
+    deleteConducteur(id: ID!): Boolean!
+
+    createMaintenance(input: MaintenanceInput!): Maintenance!
+    updateMaintenance(id: ID!, input: MaintenanceInput!): Maintenance!
+    deleteMaintenance(id: ID!): Boolean!
+
+    createLocalisation(input: LocalisationInput!): Localisation!
+    deleteLocalisation(id: ID!): Boolean!
+
+    createEvenement(input: EvenementInput!): Evenement!
+    deleteEvenement(id: ID!): Boolean!
   }
 `;
 
 const resolvers = {
   Query: {
-    drivers: async () => {
-      try {
-        const { data } = await axios.get('http://localhost:3001/drivers');
-        return data;
-      } catch (error) {
-        console.error('Drivers service error:', error.message);
-        return [];
-      }
+    vehicules: async (_, __, { authHeader }) => {
+      const { data } = await axios.get(`${VEHICLE_URL}/vehicles`, { headers: { Authorization: authHeader } });
+      return data;
     },
-    driver: async (_, { id }) => {
-      try {
-        const { data } = await axios.get(`http://localhost:3001/drivers/${id}`);
-        return data;
-      } catch (error) {
-        throw new Error('Driver not found');
-      }
+    vehicule: async (_, { id }, { authHeader }) => {
+      const { data } = await axios.get(`${VEHICLE_URL}/vehicles/${id}`, { headers: { Authorization: authHeader } });
+      return data;
     },
-    vehicles: async () => {
-      try {
-        const { data } = await axios.get('http://localhost:3000/vehicles');
-        return data;
-      } catch (error) {
-        console.error('Vehicles service error:', error.message);
-        return [];
-      }
+
+    conducteurs: async (_, __, { authHeader }) => {
+      const { data } = await axios.get(`${DRIVER_URL}/conducteurs`, { headers: { Authorization: authHeader } });
+      return data;
     },
-    vehicle: async (_, { id }) => {
-      try {
-        const { data } = await axios.get(`http://localhost:3000/vehicles/${id}`);
-        return data;
-      } catch (error) {
-        throw new Error('Vehicle not found');
-      }
+    conducteur: async (_, { id }, { authHeader }) => {
+      const { data } = await axios.get(`${DRIVER_URL}/conducteurs/${id}`, { headers: { Authorization: authHeader } });
+      return data;
     },
-    locations: async () => {
-      try {
-        const { data } = await axios.get('http://localhost:3003/locations');
-        return data;
-      } catch (error) {
-        console.error('Locations service error:', error.message);
-        return [];
-      }
+
+    maintenances: async (_, __, { authHeader }) => {
+      const { data } = await axios.get(`${MAINT_URL}/maintenance`, { headers: { Authorization: authHeader } });
+      return data;
     },
-    location: async (_, { vehicleId }) => {
-      try {
-        const { data } = await axios.get(`http://localhost:3003/locations/${vehicleId}`);
-        return data;
-      } catch (error) {
-        throw new Error('Location not found');
-      }
+    maintenance: async (_, { id }, { authHeader }) => {
+      const { data } = await axios.get(`${MAINT_URL}/maintenance/${id}`, { headers: { Authorization: authHeader } });
+      return data;
     },
-    maintenances: async () => {
-      try {
-        const { data } = await axios.get('http://localhost:3002/maintenance');
-        return data;
-      } catch (error) {
-        console.error('Maintenances service error:', error.message);
-        return [];
-      }
+
+    localisations: async (_, __, { authHeader }) => {
+      const { data } = await axios.get(`${LOCATION_URL}/localisations`, { headers: { Authorization: authHeader } });
+      return data;
     },
-    maintenance: async (_, { id }) => {
-      try {
-        const { data } = await axios.get(`http://localhost:3002/maintenance/${id}`);
-        return data;
-      } catch (error) {
-        throw new Error('Maintenance not found');
-      }
+    localisation: async (_, { id }, { authHeader }) => {
+      const { data } = await axios.get(`${LOCATION_URL}/localisations/${id}`, { headers: { Authorization: authHeader } });
+      return data;
     },
-    reservations: async () => {
-      try {
-        const { data } = await axios.get('http://localhost:3005/reservations');
-        return data;
-      } catch (error) {
-        console.error('Reservations service error:', error.message);
-        return [];
-      }
+    positionHistory: async (_, { vehicleId, from, to, limit = 500 }, { authHeader }) => {
+      const params = new URLSearchParams();
+      if (from)  params.append('from', from);
+      if (to)    params.append('to', to);
+      params.append('limit', String(limit));
+      const { data } = await axios.get(
+        `${LOCATION_URL}/localisations/history/${vehicleId}?${params}`,
+        { headers: { Authorization: authHeader } }
+      );
+      return data;
     },
-    reservation: async (_, { id }) => {
-      try {
-        const { data } = await axios.get(`http://localhost:3005/reservations/${id}`);
-        return data;
-      } catch (error) {
-        throw new Error('Reservation not found');
-      }
+    vehiculeLastPosition: async (_, { vehicleId }, { authHeader }) => {
+      const { data } = await axios.get(
+        `${LOCATION_URL}/localisations/last/${vehicleId}`,
+        { headers: { Authorization: authHeader } }
+      );
+      return data;
+    },
+
+    evenements: async (_, __, { authHeader }) => {
+      const { data } = await axios.get(`${EVENT_URL}/evenements`, { headers: { Authorization: authHeader } });
+      return data;
+    },
+    evenement: async (_, { id }, { authHeader }) => {
+      const { data } = await axios.get(`${EVENT_URL}/evenements/${id}`, { headers: { Authorization: authHeader } });
+      return data;
     },
   },
+
   Mutation: {
-    createDriver: async (_, { input }) => {
-      try {
-        const { data } = await axios.post('http://localhost:3001/drivers', input);
-        return data;
-      } catch (error) {
-        throw new Error('Failed to create driver');
-      }
+    createVehicule: async (_, { input }, { authHeader }) => {
+      const { data } = await axios.post(`${VEHICLE_URL}/vehicles`, input, { headers: { Authorization: authHeader } });
+      return data;
     },
-    updateDriver: async (_, { id, input }) => {
-      try {
-        const { data } = await axios.put(`http://localhost:3001/drivers/${id}`, input);
-        return data;
-      } catch (error) {
-        throw new Error('Failed to update driver');
-      }
+    updateVehicule: async (_, { id, input }, { authHeader }) => {
+      const { data } = await axios.put(`${VEHICLE_URL}/vehicles/${id}`, input, { headers: { Authorization: authHeader } });
+      return data;
     },
-    deleteDriver: async (_, { id }) => {
-      try {
-        await axios.delete(`http://localhost:3001/drivers/${id}`);
-        return true;
-      } catch (error) {
-        throw new Error('Failed to delete driver');
-      }
+    deleteVehicule: async (_, { id }, { authHeader }) => {
+      await axios.delete(`${VEHICLE_URL}/vehicles/${id}`, { headers: { Authorization: authHeader } });
+      return true;
     },
-    createVehicle: async (_, { input }) => {
-      try {
-        const { data } = await axios.post('http://localhost:3000/vehicles', input);
-        return data;
-      } catch (error) {
-        throw new Error('Failed to create vehicle');
-      }
+
+    createConducteur: async (_, { input }, { authHeader }) => {
+      const { data } = await axios.post(`${DRIVER_URL}/conducteurs`, input, { headers: { Authorization: authHeader } });
+      return data;
     },
-    updateVehicle: async (_, { id, input }) => {
-      try {
-        const { data } = await axios.put(`http://localhost:3000/vehicles/${id}`, input);
-        return data;
-      } catch (error) {
-        throw new Error('Failed to update vehicle');
-      }
+    updateConducteur: async (_, { id, input }, { authHeader }) => {
+      const { data } = await axios.put(`${DRIVER_URL}/conducteurs/${id}`, input, { headers: { Authorization: authHeader } });
+      return data;
     },
-    deleteVehicle: async (_, { id }) => {
-      try {
-        await axios.delete(`http://localhost:3000/vehicles/${id}`);
-        return true;
-      } catch (error) {
-        throw new Error('Failed to delete vehicle');
-      }
+    deleteConducteur: async (_, { id }, { authHeader }) => {
+      await axios.delete(`${DRIVER_URL}/conducteurs/${id}`, { headers: { Authorization: authHeader } });
+      return true;
     },
-    createLocation: async (_, { input }) => {
-      try {
-        const { data } = await axios.post('http://localhost:3003/locations', input);
-        return data;
-      } catch (error) {
-        throw new Error('Failed to create location');
-      }
+
+    createMaintenance: async (_, { input }, { authHeader }) => {
+      const { data } = await axios.post(`${MAINT_URL}/maintenance`, input, { headers: { Authorization: authHeader } });
+      return data;
     },
-    createMaintenance: async (_, { input }) => {
-      try {
-        const { data } = await axios.post('http://localhost:3002/maintenance', input);
-        return data;
-      } catch (error) {
-        throw new Error('Failed to create maintenance');
-      }
+    updateMaintenance: async (_, { id, input }, { authHeader }) => {
+      const { data } = await axios.put(`${MAINT_URL}/maintenance/${id}`, input, { headers: { Authorization: authHeader } });
+      return data;
     },
-    updateMaintenance: async (_, { id, input }) => {
-      try {
-        const { data } = await axios.put(`http://localhost:3002/maintenance/${id}`, input);
-        return data;
-      } catch (error) {
-        throw new Error('Failed to update maintenance');
-      }
+    deleteMaintenance: async (_, { id }, { authHeader }) => {
+      await axios.delete(`${MAINT_URL}/maintenance/${id}`, { headers: { Authorization: authHeader } });
+      return true;
     },
-    deleteMaintenance: async (_, { id }) => {
-      try {
-        await axios.delete(`http://localhost:3002/maintenance/${id}`);
-        return true;
-      } catch (error) {
-        throw new Error('Failed to delete maintenance');
-      }
+
+    createLocalisation: async (_, { input }, { authHeader }) => {
+      const { data } = await axios.post(`${LOCATION_URL}/localisations`, input, { headers: { Authorization: authHeader } });
+      return data;
     },
-    createReservation: async (_, { input }) => {
-      try {
-        const { data } = await axios.post('http://localhost:3005/reservations', input);
-        return data;
-      } catch (error) {
-        throw new Error('Failed to create reservation');
-      }
+    deleteLocalisation: async (_, { id }, { authHeader }) => {
+      await axios.delete(`${LOCATION_URL}/localisations/${id}`, { headers: { Authorization: authHeader } });
+      return true;
     },
-    updateReservation: async (_, { id, input }) => {
-      try {
-        const { data } = await axios.put(`http://localhost:3005/reservations/${id}`, input);
-        return data;
-      } catch (error) {
-        throw new Error('Failed to update reservation');
-      }
+
+    createEvenement: async (_, { input }, { authHeader }) => {
+      const { data } = await axios.post(`${EVENT_URL}/evenements`, input, { headers: { Authorization: authHeader } });
+      return data;
     },
-    deleteReservation: async (_, { id }) => {
-      try {
-        await axios.delete(`http://localhost:3005/reservations/${id}`);
-        return true;
-      } catch (error) {
-        throw new Error('Failed to delete reservation');
-      }
+    deleteEvenement: async (_, { id }, { authHeader }) => {
+      await axios.delete(`${EVENT_URL}/evenements/${id}`, { headers: { Authorization: authHeader } });
+      return true;
     },
   },
 };
 
-// Standalone server
-const server = new ApolloServer({ typeDefs, resolvers });
-server.listen().then(({ url }) => {
-  console.log(`🚀 GraphQL Gateway ready at ${url}`);
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  // Passe le header Authorization dans le contexte GraphQL pour que les resolvers le transmettent
+  context: ({ req }) => ({
+    authHeader: req.headers.authorization || null,
+  }),
+  formatError: (err) => ({
+    message: err.message,
+    code: err.extensions?.code,
+  }),
+});
+
+server.listen({ port: 4000 }).then(({ url }) => {
+  console.log(`GraphQL Gateway ready at ${url}`);
 }).catch(console.error);

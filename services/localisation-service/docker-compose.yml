@@ -1,0 +1,104 @@
+# =============================================================================
+# docker-compose.yml — Environnement de développement standalone
+# Service Localisation + TimescaleDB + Kafka
+#
+# Ce fichier est indépendant du docker-compose.yaml racine.
+# Usage : depuis services/localisation-service/
+#   docker compose up -d
+#   docker compose logs -f localisation-service
+#   npm run simulate
+# =============================================================================
+
+services:
+
+  # ─── TimescaleDB ────────────────────────────────────────────────────────────
+  # Image officielle = PostgreSQL 15 + extension TimescaleDB préinstallée.
+  # Port 5433 pour éviter le conflit avec le PostgreSQL du compose principal.
+  timescaledb:
+    image: timescale/timescaledb-ha:pg15-latest
+    environment:
+      POSTGRES_DB:       fleet
+      POSTGRES_USER:     ${POSTGRES_USER:-flotte}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flotte123}
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ../../db/init-localisation.sql:/docker-entrypoint-initdb.d/01-localisation.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flotte} -d fleet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Kafka (KRaft — sans Zookeeper) ─────────────────────────────────────────
+  kafka:
+    image: apache/kafka:3.8.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: TG9jYWxpc2F0aW9uU2Vydg
+      KAFKAJS_NO_PARTITIONER_WARNING: "1"
+    healthcheck:
+      # TCP check (bash built-in) — rapide et sans JVM contrairement à kafka-topics.sh
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9092' 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  # ─── Service Localisation ───────────────────────────────────────────────────
+  localisation-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"     # HTTP REST + /health
+      - "50051:50051"   # gRPC streaming GPS
+    environment:
+      - PORT=3003
+      - GRPC_PORT=50051
+      # TimescaleDB
+      - TIMESCALEDB_HOST=timescaledb
+      - TIMESCALEDB_PORT=5432
+      - TIMESCALEDB_DB=fleet
+      - TIMESCALEDB_USER=${POSTGRES_USER:-flotte}
+      - TIMESCALEDB_PASSWORD=${POSTGRES_PASSWORD:-flotte123}
+      # Kafka
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_GEO_ALERTS_TOPIC=geo-alerts
+      - KAFKAJS_NO_PARTITIONER_WARNING=1
+      # Keycloak — utilise host.docker.internal pour atteindre le Keycloak
+      # du compose principal (exposé sur le port 8080 de la machine hôte)
+      - KEYCLOAK_URL=${KEYCLOAK_URL:-http://host.docker.internal:8080}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-flotte}
+    extra_hosts:
+      # Résolution de host.docker.internal sur Windows/WSL2
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3003/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  timescale_data:   # données TimescaleDB persistantes entre les redémarrages

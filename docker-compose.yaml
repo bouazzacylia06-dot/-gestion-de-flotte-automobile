@@ -1,30 +1,221 @@
-version: '3.8'
-
 services:
+  # ─── Infrastructure ───────────────────────────────────────────────────────
+
+  postgres:
+    # timescaledb-ha = PostgreSQL 15 + extension TimescaleDB (superset de postgres:15-alpine)
+    # Compatible avec vehicle-service (schéma service_vehicles inchangé)
+    # + supporte la hypertable du service-localisation (schéma service_localisation)
+    image: timescale/timescaledb-ha:pg15-latest
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-flotte}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flotte123}
+      POSTGRES_DB: fleet
+    # Port retiré : PostgreSQL accessible via flotte-net uniquement (pas d'exposition hôte)
+    # Pour debug local : docker compose exec postgres psql -U flotte -d fleet
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init-vehicles.sql:/docker-entrypoint-initdb.d/01-init-vehicles.sql
+      - ./db/init-localisation.sql:/docker-entrypoint-initdb.d/02-init-localisation.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flotte} -d fleet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - flotte-net
+
+  kafka:
+    # Migration : bitnami/kafka a quitté Docker Hub → image officielle Apache Kafka
+    image: apache/kafka:3.8.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "9094:9094"
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    healthcheck:
+      # TCP check (bash built-in) — rapide et sans JVM contrairement à kafka-topics.sh
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9092' 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - flotte-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+    command: start-dev --import-realm
+    volumes:
+      - ./keycloak/realm-flotte.json:/opt/keycloak/data/import/realm-flotte.json
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # Keycloak 23 start-dev + Liquibase init DB : peut prendre jusqu'à 10 min
+      # pas de curl/wget dans UBI9-minimal → redirection TCP bash
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080' 2>/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 600s
+    restart: unless-stopped
+    networks:
+      - flotte-net
+
+  # ─── Microservices ────────────────────────────────────────────────────────
+
   vehicle-service:
-    build: ./vehicule-service
+    build: ./services/vehicule-service
     ports:
       - "3000:3000"
+    environment:
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=flotte
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=fleet
+      - POSTGRES_USER=${POSTGRES_USER:-flotte}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-flotte123}
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy   # corrigé : service_started → service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - flotte-net
 
   driver-service:
-    build: ./conducteur-service
+    build: ./services/conducteur-service
     ports:
       - "3001:3001"
+    environment:
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=flotte
+    depends_on:
+      keycloak:
+        condition: service_healthy   # corrigé : service_started → service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - flotte-net
 
   maintenance-service:
-    build: ./maintenance-service
+    build: ./services/maintenance-service
     ports:
       - "3002:3002"
+    environment:
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=flotte
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy   # corrigé : service_started → service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - flotte-net
 
   location-service:
-    build: ./localisation-service
+    build: ./services/localisation-service
     ports:
-      - "3003:3003"
+      - "3003:3003"     # HTTP REST + /health (API Gateway GraphQL)
+      - "50051:50051"   # gRPC streaming GPS (traceurs embarqués)
+    environment:
+      - PORT=3003
+      - GRPC_PORT=50051
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=flotte
+      # TimescaleDB (même instance que postgres, schéma service_localisation)
+      - TIMESCALEDB_HOST=postgres
+      - TIMESCALEDB_PORT=5432
+      - TIMESCALEDB_DB=fleet
+      - TIMESCALEDB_USER=${POSTGRES_USER:-flotte}
+      - TIMESCALEDB_PASSWORD=${POSTGRES_PASSWORD:-flotte123}
+      # Kafka : alertes géofencing → topic geo-alerts
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_GEO_ALERTS_TOPIC=geo-alerts
+      - KAFKAJS_NO_PARTITIONER_WARNING=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3003/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - flotte-net
 
   event-service:
-    build: ./evenement-service
+    build: ./services/evenement-service
     ports:
       - "3004:3004"
+    environment:
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=flotte
+      - KAFKA_BROKER=kafka:9092     # ajouté : event-service est un Kafka consumer
+    depends_on:
+      keycloak:
+        condition: service_healthy   # corrigé : service_started → service_healthy
+      kafka:
+        condition: service_healthy   # ajouté
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3004/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - flotte-net
 
   gestion-flotte-gateway:
     build:
@@ -32,10 +223,33 @@ services:
       dockerfile: gestion-flotte.Dockerfile
     ports:
       - "4000:4000"
+    environment:
+      - VEHICLE_SERVICE_URL=http://vehicle-service:3000
+      - DRIVER_SERVICE_URL=http://driver-service:3001
+      - MAINTENANCE_SERVICE_URL=http://maintenance-service:3002
+      - LOCATION_SERVICE_URL=http://location-service:3003
+      - EVENT_SERVICE_URL=http://event-service:3004
     depends_on:
-      - vehicle-service
-      - driver-service
-      - maintenance-service
-      - location-service
-      - event-service
+      vehicle-service:
+        condition: service_healthy   # corrigé : liste courte → condition: service_healthy
+      driver-service:
+        condition: service_healthy
+      maintenance-service:
+        condition: service_healthy
+      location-service:
+        condition: service_healthy
+      event-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - flotte-net
 
+# ─── Volumes persistants ──────────────────────────────────────────────────
+volumes:
+  pgdata:      # données TimescaleDB (PostgreSQL + extension) — survivent à docker-compose down
+  kafkadata:   # logs Kafka — survivent au redémarrage
+
+# ─── Réseau isolé ─────────────────────────────────────────────────────────
+networks:
+  flotte-net:
+    driver: bridge
