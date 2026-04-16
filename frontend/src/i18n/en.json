@@ -1,0 +1,102 @@
+{
+  "nav": {
+    "dashboard":    "Dashboard",
+    "vehicles":     "Vehicles",
+    "conducteurs":  "Drivers",
+    "maintenance":  "Maintenance",
+    "localisation": "Tracking",
+    "logout":       "Logout"
+  },
+  "dashboard": {
+    "title":              "Fleet Dashboard",
+    "activeVehicles":     "Active Vehicles",
+    "geoAlerts":          "Geofencing Alerts",
+    "plannedMaintenance": "Planned Maintenance",
+    "assignedDrivers":    "Assigned Drivers",
+    "fleetStatus":        "Fleet Status",
+    "recentEvents":       "Recent Events"
+  },
+  "vehicles": {
+    "title":          "Vehicle Management",
+    "new":            "New Vehicle",
+    "plate":          "License Plate",
+    "brand":          "Brand",
+    "model":          "Model",
+    "status":         "Status",
+    "driver":         "Driver",
+    "actions":        "Actions",
+    "viewOnMap":      "View on Map",
+    "editVehicle":    "Edit Vehicle",
+    "deleteVehicle":  "Delete Vehicle",
+    "confirmDelete":  "Confirm Deletion",
+    "noVehicles":     "No vehicles found",
+    "statuts": {
+      "en_service":     "In Service",
+      "disponible":     "Available",
+      "en_maintenance": "Under Maintenance",
+      "hors_service":   "Out of Service"
+    }
+  },
+  "conducteurs": {
+    "title":         "Driver Management",
+    "new":           "New Driver",
+    "lastName":      "Last Name",
+    "firstName":     "First Name",
+    "license":       "License No.",
+    "status":        "Status",
+    "noConducteurs": "No drivers found",
+    "statuts": {
+      "actif":    "Active",
+      "inactif":  "Inactive",
+      "suspendu": "Suspended"
+    }
+  },
+  "maintenance": {
+    "title":       "Maintenance Planning",
+    "planned":     "Planned",
+    "inProgress":  "In Progress",
+    "done":        "Done",
+    "report":      "Report an Issue",
+    "type":        "Type",
+    "cost":        "Cost",
+    "date":        "Date",
+    "noMaintenances": "No maintenance records found",
+    "types": {
+      "vidange":            "Oil Change",
+      "revision":           "Service",
+      "reparation":         "Repair",
+      "controle_technique": "Technical Inspection",
+      "diagnostic":         "Diagnostic"
+    }
+  },
+  "localisation": {
+    "title":      "Fleet Tracking",
+    "mapTitle":   "Vehicle Map",
+    "lastUpdate": "Last Update",
+    "speed":      "Speed",
+    "position":   "Position",
+    "history":    "Position History",
+    "noData":     "No GPS data available"
+  },
+  "common": {
+    "loading":  "Loading...",
+    "error":    "An error occurred",
+    "save":     "Save",
+    "cancel":   "Cancel",
+    "delete":   "Delete",
+    "edit":     "Edit",
+    "confirm":  "Confirm",
+    "close":    "Close",
+    "search":   "Search",
+    "filter":   "Filter",
+    "refresh":  "Refresh",
+    "noData":   "No data"
+  },
+  "auth": {
+    "unauthorized": "Access Denied",
+    "noPermission": "You don't have permission to access this page.",
+    "goBack":       "Back to Dashboard",
+    "login":        "Sign In",
+    "loginWith":    "Sign In with Keycloak"
+  }
+}

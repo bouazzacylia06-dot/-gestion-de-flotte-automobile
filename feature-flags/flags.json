@@ -1,0 +1,49 @@
+{
+  "flags": {
+    "NEW_DASHBOARD_V2": {
+      "enabled": true,
+      "description": "Nouveau dashboard avec graphiques Recharts avancés",
+      "rolloutPercentage": 20,
+      "targetRoles": [
+        "admin"
+      ]
+    },
+    "REALTIME_GPS_WEBSOCKET": {
+      "enabled": true,
+      "description": "GPS temps réel via WebSocket au lieu du polling HTTP",
+      "rolloutPercentage": 50,
+      "targetRoles": [
+        "admin",
+        "manager"
+      ]
+    },
+    "MAINTENANCE_AI_PREDICTION": {
+      "enabled": false,
+      "description": "Prédiction IA des maintenances préventives (expérimental)",
+      "rolloutPercentage": 0,
+      "targetRoles": [
+        "technicien"
+      ]
+    },
+    "EXPORT_CSV": {
+      "enabled": true,
+      "description": "Export CSV des données véhicules et conducteurs",
+      "rolloutPercentage": 100,
+      "targetRoles": [
+        "admin",
+        "manager"
+      ]
+    },
+    "DARK_MODE": {
+      "enabled": false,
+      "description": "Mode sombre de l'interface",
+      "rolloutPercentage": 0,
+      "targetRoles": [
+        "admin",
+        "manager",
+        "technicien",
+        "utilisateur"
+      ]
+    }
+  }
+}

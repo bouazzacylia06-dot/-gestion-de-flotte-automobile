@@ -244,6 +244,77 @@ services:
     networks:
       - flotte-net
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # VITE_* sont baked au build (pas runtime nginx) — passer ici les valeurs réseau interne
+        VITE_KEYCLOAK_URL: http://localhost:8080
+        VITE_KEYCLOAK_REALM: flotte
+        VITE_KEYCLOAK_CLIENT_ID: flotte-app
+        VITE_GRAPHQL_URL: http://localhost:4000/graphql
+        VITE_API_URL: http://localhost:4000
+        VITE_FLAGS_URL: http://localhost:3006
+    ports:
+      - "80:80"
+    depends_on:
+      gestion-flotte-gateway:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - flotte-net
+
+  # ─── Bonus : Feature Flags & Canary Deployment ────────────────────────────
+
+  feature-flags:
+    build: ./feature-flags
+    ports:
+      - "3006:3006"
+    volumes:
+      - ./feature-flags/flags.json:/app/flags.json   # Hot-reload sans redémarrage
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3006/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - flotte-net
+
+  # vehicle-service-canary : reçoit 20% du trafic via nginx/canary.conf
+  # Décommenter pour activer le canary deployment
+  # vehicle-service-canary:
+  #   build:
+  #     context: ./services/vehicule-service
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - NODE_ENV=canary
+  #     - VERSION=2.0.0-canary
+  #     - KEYCLOAK_URL=http://keycloak:8080
+  #     - KEYCLOAK_REALM=flotte
+  #     - POSTGRES_HOST=postgres
+  #     - POSTGRES_DB=fleet
+  #     - POSTGRES_USER=${POSTGRES_USER:-flotte}
+  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-flotte123}
+  #     - KAFKA_BROKER=kafka:9092
+  #   ports:
+  #     - "3011:3000"   # Port distinct pour le canary
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   networks:
+  #     - flotte-net
+
 # ─── Volumes persistants ──────────────────────────────────────────────────
 volumes:
   pgdata:      # données TimescaleDB (PostgreSQL + extension) — survivent à docker-compose down

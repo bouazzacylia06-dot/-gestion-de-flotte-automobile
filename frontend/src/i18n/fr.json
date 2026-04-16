@@ -1,0 +1,102 @@
+{
+  "nav": {
+    "dashboard":    "Tableau de bord",
+    "vehicles":     "Véhicules",
+    "conducteurs":  "Conducteurs",
+    "maintenance":  "Maintenance",
+    "localisation": "Localisation",
+    "logout":       "Déconnexion"
+  },
+  "dashboard": {
+    "title":              "Tableau de bord de la flotte",
+    "activeVehicles":     "Véhicules actifs",
+    "geoAlerts":          "Alertes géofencing",
+    "plannedMaintenance": "Maintenances planifiées",
+    "assignedDrivers":    "Conducteurs assignés",
+    "fleetStatus":        "État de la flotte",
+    "recentEvents":       "Évènements récents"
+  },
+  "vehicles": {
+    "title":          "Gestion des véhicules",
+    "new":            "Nouveau véhicule",
+    "plate":          "Immatriculation",
+    "brand":          "Marque",
+    "model":          "Modèle",
+    "status":         "Statut",
+    "driver":         "Conducteur",
+    "actions":        "Actions",
+    "viewOnMap":      "Voir sur la carte",
+    "editVehicle":    "Modifier le véhicule",
+    "deleteVehicle":  "Supprimer le véhicule",
+    "confirmDelete":  "Confirmer la suppression",
+    "noVehicles":     "Aucun véhicule trouvé",
+    "statuts": {
+      "en_service":     "En service",
+      "disponible":     "Disponible",
+      "en_maintenance": "En maintenance",
+      "hors_service":   "Hors service"
+    }
+  },
+  "conducteurs": {
+    "title":         "Gestion des conducteurs",
+    "new":           "Nouveau conducteur",
+    "lastName":      "Nom",
+    "firstName":     "Prénom",
+    "license":       "N° de permis",
+    "status":        "Statut",
+    "noConducteurs": "Aucun conducteur trouvé",
+    "statuts": {
+      "actif":    "Actif",
+      "inactif":  "Inactif",
+      "suspendu": "Suspendu"
+    }
+  },
+  "maintenance": {
+    "title":       "Planification de maintenance",
+    "planned":     "Planifié",
+    "inProgress":  "En cours",
+    "done":        "Terminé",
+    "report":      "Signaler un problème",
+    "type":        "Type",
+    "cost":        "Coût",
+    "date":        "Date",
+    "noMaintenances": "Aucune maintenance trouvée",
+    "types": {
+      "vidange":            "Vidange",
+      "revision":           "Révision",
+      "reparation":         "Réparation",
+      "controle_technique": "Contrôle technique",
+      "diagnostic":         "Diagnostic"
+    }
+  },
+  "localisation": {
+    "title":      "Localisation de la flotte",
+    "mapTitle":   "Carte des véhicules",
+    "lastUpdate": "Dernière mise à jour",
+    "speed":      "Vitesse",
+    "position":   "Position",
+    "history":    "Historique des positions",
+    "noData":     "Aucune donnée GPS disponible"
+  },
+  "common": {
+    "loading":  "Chargement...",
+    "error":    "Une erreur est survenue",
+    "save":     "Enregistrer",
+    "cancel":   "Annuler",
+    "delete":   "Supprimer",
+    "edit":     "Modifier",
+    "confirm":  "Confirmer",
+    "close":    "Fermer",
+    "search":   "Rechercher",
+    "filter":   "Filtrer",
+    "refresh":  "Actualiser",
+    "noData":   "Aucune donnée"
+  },
+  "auth": {
+    "unauthorized": "Accès refusé",
+    "noPermission": "Vous n'avez pas les droits pour accéder à cette page.",
+    "goBack":       "Retour au tableau de bord",
+    "login":        "Se connecter",
+    "loginWith":    "Se connecter avec Keycloak"
+  }
+}

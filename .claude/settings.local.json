@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(docker compose:*)",
+      "Bash(curl -s http://localhost:3002/health)",
+      "Bash(curl -s -X POST http://localhost:3002/maintenance -H \"Content-Type: application/json\" -d '{\"vehicleId\":\"V001\",\"date\":\"2026-04-10\",\"type\":\"vidange\",\"status\":\"planifiee\",\"cost\":150}')",
+      "Bash(curl -s -X POST http://localhost:3002/maintenance -H \"Content-Type: application/json\" -d '{\"vehicleId\":\"V001\",\"date\":\"bad-date\",\"type\":\"vidange\",\"status\":\"planifiee\",\"cost\":150}')",
+      "Bash(npm test:*)",
+      "Bash(xargs grep:*)",
+      "Bash(python3 -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\('deps:', list\\(p.get\\('dependencies',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(python3 -c ':*)",
+      "Bash(docker pull:*)"
+    ]
+  }
+}
