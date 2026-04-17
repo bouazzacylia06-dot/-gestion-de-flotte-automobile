@@ -150,4 +150,4 @@ INSERT INTO service_localisation.zones_geofencing (name, type, polygon, active) 
     }',
     true
 )
-ON CONFLICT DO NOTHING;
+
