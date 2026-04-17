@@ -1,2 +1,20 @@
-node_modules
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment
 .env
+**/.env
+
+# Coverage reports
+coverage/
+**/coverage/
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# OS
+.DS_Store
+Thumbs.db

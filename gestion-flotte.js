@@ -8,17 +8,6 @@ const MAINT_URL     = process.env.MAINTENANCE_SERVICE_URL || 'http://localhost:3
 const LOCATION_URL  = process.env.LOCATION_SERVICE_URL  || 'http://localhost:3003';
 const EVENT_URL     = process.env.EVENT_SERVICE_URL     || 'http://localhost:3004';
 
-// Normalise une row de localisation : vehicleId (REST) → vehiculeId (GraphQL)
-const mapLocalisation = (row) => row ? {
-  id:         row.correlationId || row.id || `${row.vehicleId}-${row.timestamp}`,
-  vehiculeId: row.vehiculeId   || row.vehicleId || null,
-  latitude:   row.latitude,
-  longitude:  row.longitude,
-  speed:      row.speed    ?? null,
-  heading:    row.heading  ?? null,
-  timestamp:  row.timestamp instanceof Date ? row.timestamp.toISOString() : (row.timestamp || row.time),
-} : null;
-
 const typeDefs = `#graphql
   # --- Véhicule ---
   type Vehicule {
@@ -175,11 +164,11 @@ const resolvers = {
 
     localisations: async (_, __, { authHeader }) => {
       const { data } = await axios.get(`${LOCATION_URL}/localisations`, { headers: { Authorization: authHeader } });
-      return Array.isArray(data) ? data.map(mapLocalisation) : [];
+      return data;
     },
     localisation: async (_, { id }, { authHeader }) => {
       const { data } = await axios.get(`${LOCATION_URL}/localisations/${id}`, { headers: { Authorization: authHeader } });
-      return mapLocalisation(data);
+      return data;
     },
     positionHistory: async (_, { vehicleId, from, to, limit = 500 }, { authHeader }) => {
       const params = new URLSearchParams();
@@ -252,7 +241,7 @@ const resolvers = {
 
     createLocalisation: async (_, { input }, { authHeader }) => {
       const { data } = await axios.post(`${LOCATION_URL}/localisations`, input, { headers: { Authorization: authHeader } });
-      return mapLocalisation(data);
+      return data;
     },
     deleteLocalisation: async (_, { id }, { authHeader }) => {
       await axios.delete(`${LOCATION_URL}/localisations/${id}`, { headers: { Authorization: authHeader } });

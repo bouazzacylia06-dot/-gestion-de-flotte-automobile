@@ -20,7 +20,7 @@ spec:
           image: maintenance-service:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 30002
+            - containerPort: 3002
           env:
             - name: APP_PORT
               value: "3002"
