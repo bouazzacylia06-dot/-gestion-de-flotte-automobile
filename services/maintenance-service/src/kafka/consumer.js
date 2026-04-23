@@ -1,5 +1,6 @@
 const { Kafka } = require('kafkajs');
 const maintenanceRepository = require('../repositories/maintenanceRepository');
+const { setKafkaConsumerLag } = require('../metrics');
 
 const kafka = new Kafka({
   clientId: 'maintenance-service-consumer',
@@ -8,6 +9,7 @@ const kafka = new Kafka({
 });
 
 const consumer = kafka.consumer({ groupId: 'maintenance-saga-group' });
+const consumerGroup = 'maintenance-saga-group';
 
 /**
  * Écoute les événements vehicule-events pour le saga pattern.
@@ -19,18 +21,30 @@ const start = async () => {
   await consumer.subscribe({ topic: 'vehicule-events', fromBeginning: false });
 
   await consumer.run({
-    eachMessage: async ({ message }) => {
-      try {
-        const event = JSON.parse(message.value.toString());
-
-        if (event.eventType === 'VEHICLE_UPDATE_FAILED') {
-          console.log(`[Kafka Saga] Compensation reçue pour maintenance ${event.maintenanceId} — rollback`);
-          // Compensation : supprimer la maintenance créée dont la mise à jour véhicule a échoué
-          await maintenanceRepository.remove(event.maintenanceId);
-          console.log(`[Kafka Saga] Maintenance ${event.maintenanceId} supprimée (rollback saga)`);
+    eachBatch: async ({ batch, resolveOffset, heartbeat, isRunning, isStale }) => {
+      for (const message of batch.messages) {
+        if (!isRunning() || isStale()) {
+          break;
         }
-      } catch (err) {
-        console.error('[Kafka Consumer] Erreur traitement message:', err.message);
+
+        const lag = Math.max(Number(batch.highWatermark) - Number(message.offset) - 1, 0);
+        setKafkaConsumerLag(batch.topic, consumerGroup, lag);
+
+        try {
+          const event = JSON.parse(message.value.toString());
+
+          if (event.eventType === 'VEHICLE_UPDATE_FAILED') {
+            console.log(`[Kafka Saga] Compensation reçue pour maintenance ${event.maintenanceId} — rollback`);
+            // Compensation : supprimer la maintenance créée dont la mise à jour véhicule a échoué
+            await maintenanceRepository.remove(event.maintenanceId);
+            console.log(`[Kafka Saga] Maintenance ${event.maintenanceId} supprimée (rollback saga)`);
+          }
+        } catch (err) {
+          console.error('[Kafka Consumer] Erreur traitement message:', err.message);
+        } finally {
+          resolveOffset(message.offset);
+          await heartbeat();
+        }
       }
     },
   });

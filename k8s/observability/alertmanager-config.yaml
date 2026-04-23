@@ -1,0 +1,245 @@
+---
+# ConfigMap pour la configuration Alertmanager + liste des emails
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: flotte-observability
+  labels:
+    app: alertmanager
+    version: v1
+data:
+  # Configuration Alertmanager principale
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      # SMTP global config - optionnel si défini par secret
+      # smtp_smarthost: 'smtp.gmail.com:587'
+      # smtp_auth_username: '{{ env "SMTP_USER" }}'
+      # smtp_auth_password: '{{ env "SMTP_PASSWORD" }}'
+      # smtp_from: '{{ env "SMTP_FROM" }}'
+
+    # Templates pour les emails détaillés
+    templates:
+      - '/etc/alertmanager/templates/*.tmpl'
+
+    # Route par défaut
+    route:
+      # Attendre 10s avant d'envoyer (grouper les alertes)
+      group_wait: 10s
+      # Envoyer les mises à jour chaque 5 min
+      group_interval: 5m
+      # Envoyer les alertes en attente chaque 15 min
+      repeat_interval: 15m
+      receiver: 'email-default'
+      
+      # Routes spécifiques par sévérité
+      routes:
+        # Alertes CRITIQUES
+        - match:
+            severity: critical
+          receiver: 'email-critical'
+          continue: true  # Envoyer aussi à email-default
+          group_wait: 10s
+          group_interval: 1m
+          repeat_interval: 15m
+
+        # Alertes WARNING
+        - match:
+            severity: warning
+          receiver: 'email-warning'
+          group_wait: 30s
+          group_interval: 5m
+
+        # Alertes INFO
+        - match:
+            severity: info
+          receiver: 'email-info'
+          group_wait: 1m
+
+    # Définition des recepteurs
+    receivers:
+      # Défaut - reçoit tout
+      - name: 'email-default'
+        email_configs:
+          - to: '{{ env "ALERTMANAGER_EMAIL_TO_DEFAULT" }}'
+            from: '{{ env "ALERTMANAGER_EMAIL_FROM" }}'
+            smarthost: '{{ env "ALERTMANAGER_SMTP_HOST" }}:{{ env "ALERTMANAGER_SMTP_PORT" }}'
+            auth_username: '{{ env "ALERTMANAGER_SMTP_USER" }}'
+            auth_password: '{{ env "ALERTMANAGER_SMTP_PASSWORD" }}'
+            headers:
+              Subject: '[ALERTE] {{ .GroupLabels.alertname }}'
+            html: |
+              <h2>{{ .GroupLabels.alertname }}</h2>
+              <p><strong>Sévérité:</strong> {{ .GroupLabels.severity }}</p>
+              <p><strong>Service:</strong> {{ .GroupLabels.exported_service }}</p>
+              <hr>
+              {{ range .Alerts }}
+              <h3>{{ .Labels.alertname }}</h3>
+              <ul>
+                <li><strong>Instance:</strong> {{ .Labels.exported_service }}</li>
+                <li><strong>Job:</strong> {{ .Labels.job }}</li>
+                <li><strong>Depuis:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</li>
+              </ul>
+              <p><strong>Annotation:</strong> {{ .Annotations.description }}</p>
+              {{ end }}
+              <p><small>Prometheus Instance: {{ .ExternalURL }}</small></p>
+
+      # CRITIQUES - To ops team
+      - name: 'email-critical'
+        email_configs:
+          - to: '{{ env "ALERTMANAGER_EMAIL_TO_CRITICAL" }}'
+            from: '{{ env "ALERTMANAGER_EMAIL_FROM" }}'
+            smarthost: '{{ env "ALERTMANAGER_SMTP_HOST" }}:{{ env "ALERTMANAGER_SMTP_PORT" }}'
+            auth_username: '{{ env "ALERTMANAGER_SMTP_USER" }}'
+            auth_password: '{{ env "ALERTMANAGER_SMTP_PASSWORD" }}'
+            headers:
+              Subject: '[🚨 CRITIQUE] {{ .GroupLabels.alertname }}'
+            html: |
+              <h1 style="color: red;">🚨 ALERTE CRITIQUE</h1>
+              <h2>{{ .GroupLabels.alertname }}</h2>
+              <p><strong>Service:</strong> <span style="color: red; font-weight: bold;">{{ .GroupLabels.exported_service }}</span></p>
+              <hr>
+              {{ range .Alerts }}
+              <div style="border: 1px solid red; padding: 10px; margin: 10px 0;">
+                <h3>{{ .Labels.alertname }}</h3>
+                <ul>
+                  <li><strong>Status:</strong> {{ .Status }}</li>
+                  <li><strong>Depuis:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</li>
+                </ul>
+                <p>{{ .Annotations.description }}</p>
+              </div>
+              {{ end }}
+              <p><strong>👉 Action Requise!</strong></p>
+
+      # WARNING
+      - name: 'email-warning'
+        email_configs:
+          - to: '{{ env "ALERTMANAGER_EMAIL_TO_WARNING" }}'
+            from: '{{ env "ALERTMANAGER_EMAIL_FROM" }}'
+            smarthost: '{{ env "ALERTMANAGER_SMTP_HOST" }}:{{ env "ALERTMANAGER_SMTP_PORT" }}'
+            auth_username: '{{ env "ALERTMANAGER_SMTP_USER" }}'
+            auth_password: '{{ env "ALERTMANAGER_SMTP_PASSWORD" }}'
+            headers:
+              Subject: '[⚠️ WARNING] {{ .GroupLabels.alertname }}'
+
+      # INFO (très peu de emails)
+      - name: 'email-info'
+        email_configs:
+          - to: '{{ env "ALERTMANAGER_EMAIL_TO_INFO" }}'
+            from: '{{ env "ALERTMANAGER_EMAIL_FROM" }}'
+            smarthost: '{{ env "ALERTMANAGER_SMTP_HOST" }}:{{ env "ALERTMANAGER_SMTP_PORT" }}'
+            auth_username: '{{ env "ALERTMANAGER_SMTP_USER" }}'
+            auth_password: '{{ env "ALERTMANAGER_SMTP_PASSWORD" }}'
+            headers:
+              Subject: '[ℹ️ INFO] {{ .GroupLabels.alertname }}'
+
+    # Optionnel : Inhibition (supprime certaines alertes si d'autres sont actives)
+    inhibit_rules:
+      # Ne pas envoyer WARNING si CRITICAL actif
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['exported_service', 'alertname']
+      
+      # Ne pas envoyer INFO si WARNING/CRITICAL actif
+      - source_match:
+          severity: 'warning'
+        target_match:
+          severity: 'info'
+        equal: ['exported_service', 'alertname']
+
+  # Liste des destinataires - FACILE À MODIFIER !
+  recipients.txt: |
+    # Format: one email per line
+    # Les emails sont utilisés par les variables d'env dans alertmanager.yml
+    # Voir les variables ALERTMANAGER_EMAIL_TO_* ci-dessous
+
+    # Équipe DEV (par défaut + warning)
+    dev-team@example.com
+    backend-lead@example.com
+
+    # Équipe OPS (critique seulement - voir alertmanager.yml)
+    ops-oncall@example.com
+    infra-team@example.com
+
+    # Management
+    tech-lead@example.com
+
+  # Fichier de configuration pour variables d'env
+  # À sourcer avant de lancer Alertmanager
+  env-template.sh: |
+    #!/bin/bash
+    # Configuration SMTP
+    export ALERTMANAGER_SMTP_HOST="smtp.gmail.com"
+    export ALERTMANAGER_SMTP_PORT="587"
+    export ALERTMANAGER_SMTP_USER="your-email@gmail.com"
+    export ALERTMANAGER_SMTP_PASSWORD="your-app-password"  # Google App Password, pas le vrai mot de passe
+    export ALERTMANAGER_EMAIL_FROM="fleet-alerts@company.com"
+
+    # Destinataires par sévérité
+    # CRITICAL = ops team (response rapide)
+    export ALERTMANAGER_EMAIL_TO_CRITICAL="ops-oncall@example.com,infra-team@example.com"
+    
+    # DEFAULT = tout le monde (pour logs)
+    export ALERTMANAGER_EMAIL_TO_DEFAULT="dev-team@example.com,backend-lead@example.com,tech-lead@example.com"
+    
+    # WARNING = dev team
+    export ALERTMANAGER_EMAIL_TO_WARNING="dev-team@example.com,backend-lead@example.com"
+    
+    # INFO = tech lead seulement
+    export ALERTMANAGER_EMAIL_TO_INFO="tech-lead@example.com"
+
+---
+# Secret pour les credentials SMTP (optionnel, alternative à env vars)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-smtp
+  namespace: flotte-observability
+  labels:
+    app: alertmanager
+type: Opaque
+stringData:
+  # À remplacer par tes vraies valeurs
+  smtp_host: "smtp.gmail.com"
+  smtp_port: "587"
+  smtp_user: "your-email@gmail.com"
+  smtp_password: "your-app-password"  # App Password pour Gmail
+  email_from: "fleet-alerts@example.com"
+
+---
+# Exemple d'utilisation dans les variables d'env d'un pod K8s
+# À ajouter dans ton Prometheus Deployment si tu utilises Alertmanager en K8s
+# spec:
+#   template:
+#     spec:
+#       containers:
+#       - name: alertmanager
+#         env:
+#         - name: ALERTMANAGER_SMTP_HOST
+#           valueFrom:
+#             secretKeyRef:
+#               name: alertmanager-smtp
+#               key: smtp_host
+#         - name: ALERTMANAGER_SMTP_PORT
+#           valueFrom:
+#             secretKeyRef:
+#               name: alertmanager-smtp
+#               key: smtp_port
+#         - name: ALERTMANAGER_SMTP_USER
+#           valueFrom:
+#             secretKeyRef:
+#               name: alertmanager-smtp
+#               key: smtp_user
+#         - name: ALERTMANAGER_SMTP_PASSWORD
+#           valueFrom:
+#             secretKeyRef:
+#               name: alertmanager-smtp
+#               key: smtp_password
+#         - name: ALERTMANAGER_EMAIL_FROM
+#           valueFrom:
+#             secretKeyRef:
+#               name: alertmanager-smtp
+#               key: email_from

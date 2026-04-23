@@ -1,16 +1,20 @@
+require('./tracing');
+
 const express = require('express');
 const cors = require('cors');
 const vehicleController = require('./controllers/vehicleController');
 const { validateVehicleId, validateVehiclePayload } = require('./middleware/vehicleValidation');
 const { authenticate, requireRole } = require('./middleware/authMiddleware');
+const { httpMetricsMiddleware } = require('./metrics');
 const kafkaProducer = require('./kafka/producer');
 const kafkaConsumer = require('./kafka/consumer');
 
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT || 3000);
 
 app.use(express.json());
 app.use(cors());
+app.use(httpMetricsMiddleware);
 
 app.get('/', (_req, res) => {
   res.send('Service Véhicules - Microservice de gestion des véhicules');

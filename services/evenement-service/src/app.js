@@ -1,13 +1,17 @@
+require('./tracing');
+
 const express = require('express');
 const cors = require('cors');
 const { randomUUID } = require('crypto');
 const { authenticate, requireRole } = require('./middleware/authMiddleware');
+const { httpMetricsMiddleware } = require('./metrics');
 
 const app = express();
-const port = 3004;
+const port = Number(process.env.PORT || 3004);
 
 app.use(express.json());
 app.use(cors());
+app.use(httpMetricsMiddleware);
 
 const evenements = new Map();
 const VALID_TYPES = ['alerte', 'panne', 'accident', 'revision', 'autre'];

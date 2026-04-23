@@ -10,8 +10,10 @@
 // =============================================================================
 
 const { Kafka } = require('kafkajs');
+const { setKafkaConsumerLag } = require('../metrics');
 
 const GEO_ALERTS_TOPIC = process.env.KAFKA_GEO_ALERTS_TOPIC || 'geo-alerts';
+const consumerGroup = 'maintenance-geo-alerts';
 
 async function startGeoAlertsConsumer() {
   const kafka = new Kafka({
@@ -28,39 +30,51 @@ async function startGeoAlertsConsumer() {
   console.log(`[Maintenance] Consumer geo-alerts connecté — topic: ${GEO_ALERTS_TOPIC}`);
 
   await consumer.run({
-    eachMessage: async ({ message }) => {
-      try {
-        const alert = JSON.parse(message.value.toString());
+    eachBatch: async ({ batch, resolveOffset, heartbeat, isRunning, isStale }) => {
+      for (const message of batch.messages) {
+        if (!isRunning() || isStale()) {
+          break;
+        }
 
-        const isCritical =
-          (alert.type === 'ZONE_EXIT'  && alert.zoneType === 'AUTHORIZED') ||
-          (alert.type === 'ZONE_ENTRY' && alert.zoneType === 'FORBIDDEN');
+        const lag = Math.max(Number(batch.highWatermark) - Number(message.offset) - 1, 0);
+        setKafkaConsumerLag(batch.topic, consumerGroup, lag);
 
-        const level = isCritical ? 'WARN' : 'INFO';
-        console.log(JSON.stringify({
-          level,
-          service:   'maintenance-service',
-          message:   `[GeoAlert] ${alert.type} — véhicule ${alert.vehicleId} — zone ${alert.zoneName} (${alert.zoneType})`,
-          vehicleId: alert.vehicleId,
-          zoneId:    alert.zoneId,
-          type:      alert.type,
-          position:  alert.position,
-          timestamp: alert.timestamp,
-        }));
+        try {
+          const alert = JSON.parse(message.value.toString());
 
-        // Exemple d'extension : créer une intervention préventive si sortie de zone autorisée
-        // if (alert.type === 'ZONE_EXIT' && alert.zoneType === 'AUTHORIZED') {
-        //   await maintenanceRepository.createPreventiveAlert(alert);
-        // }
+          const isCritical =
+            (alert.type === 'ZONE_EXIT'  && alert.zoneType === 'AUTHORIZED') ||
+            (alert.type === 'ZONE_ENTRY' && alert.zoneType === 'FORBIDDEN');
 
-      } catch (err) {
-        console.error(JSON.stringify({
-          level:   'ERROR',
-          service: 'maintenance-service',
-          message: '[GeoAlert] Erreur traitement alerte géofencing',
-          error:   err.message,
-        }));
-        // Non bloquant : on continue à consommer les messages suivants
+          const level = isCritical ? 'WARN' : 'INFO';
+          console.log(JSON.stringify({
+            level,
+            service:   'maintenance-service',
+            message:   `[GeoAlert] ${alert.type} — véhicule ${alert.vehicleId} — zone ${alert.zoneName} (${alert.zoneType})`,
+            vehicleId: alert.vehicleId,
+            zoneId:    alert.zoneId,
+            type:      alert.type,
+            position:  alert.position,
+            timestamp: alert.timestamp,
+          }));
+
+          // Exemple d'extension : créer une intervention préventive si sortie de zone autorisée
+          // if (alert.type === 'ZONE_EXIT' && alert.zoneType === 'AUTHORIZED') {
+          //   await maintenanceRepository.createPreventiveAlert(alert);
+          // }
+
+        } catch (err) {
+          console.error(JSON.stringify({
+            level:   'ERROR',
+            service: 'maintenance-service',
+            message: '[GeoAlert] Erreur traitement alerte géofencing',
+            error:   err.message,
+          }));
+          // Non bloquant : on continue à consommer les messages suivants
+        } finally {
+          resolveOffset(message.offset);
+          await heartbeat();
+        }
       }
     },
   });

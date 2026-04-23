@@ -1,17 +1,21 @@
+require('./tracing');
+
 const express = require('express');
 const cors = require('cors');
 const maintenanceController = require('./controllers/maintenanceController');
 const { validateMaintenanceId, validateMaintenancePayload } = require('./middleware/maintenanceValidation');
 const { authenticate, requireRole } = require('./middleware/authMiddleware');
+const { httpMetricsMiddleware } = require('./metrics');
 const kafkaProducer = require('./kafka/producer');
 const kafkaConsumer = require('./kafka/consumer');
 const { startGeoAlertsConsumer } = require('./kafka/geoAlertsConsumer');
 
 const app = express();
-const port = 3002;
+const port = Number(process.env.PORT || 3002);
 
 app.use(express.json());
 app.use(cors());
+app.use(httpMetricsMiddleware);
 
 app.get('/', (_req, res) => {
   res.send('Service Maintenance - Microservice de gestion des maintenances');

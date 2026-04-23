@@ -1,0 +1,130 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flotte-observability-rules
+  namespace: flotte-observability
+  labels:
+    release: prometheus
+    app.kubernetes.io/part-of: flotte-observability
+spec:
+  groups:
+    - name: infra-health.rules
+      interval: 30s
+      rules:
+        - alert: TargetDown
+          expr: up{namespace="flotte-observability"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: plateforme
+          annotations:
+            summary: "Une cible Prometheus est down"
+            description: "La cible {{ $labels.job }} ({{ $labels.instance }}) est indisponible depuis plus de 2 minutes."
+
+        - alert: OTelCollectorScrapeSlow
+          expr: avg_over_time(scrape_duration_seconds{job="otel-collector-opentelemetry-collector"}[5m]) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+            team: plateforme
+          annotations:
+            summary: "Scrape du collector OpenTelemetry lent"
+            description: "La durée moyenne de scrape du collector dépasse 0.5s sur 5 minutes."
+
+        - alert: PrometheusRuleEvaluationFailures
+          expr: increase(prometheus_rule_evaluation_failures_total[10m]) > 0
+          for: 1m
+          labels:
+            severity: warning
+            team: plateforme
+          annotations:
+            summary: "Erreurs d'évaluation de règles Prometheus"
+            description: "Prometheus a rencontré des erreurs d'évaluation de règles durant les 10 dernières minutes."
+
+    - name: api-sli.recording
+      interval: 30s
+      rules:
+        - record: job:flotte_http_requests_total:rate5m
+          expr: sum by (exported_service, route, method, status) (rate(flotte_http_requests_total[5m]))
+
+        - record: job:flotte_http_errors_total:rate5m
+          expr: sum by (exported_service, route, method) (rate(flotte_http_requests_total{status=~"5.."}[5m]))
+
+        - record: job:flotte_http_error_ratio:rate5m
+          expr: |
+            sum by (exported_service) (rate(flotte_http_requests_total{status=~"5.."}[5m]))
+            /
+            clamp_min(sum by (exported_service) (rate(flotte_http_requests_total[5m])), 0.001)
+
+        - record: job:flotte_http_latency_p95_seconds:5m
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (exported_service, le) (rate(flotte_http_request_duration_seconds_bucket[5m]))
+            )
+
+    - name: api-sli.alerts
+      interval: 30s
+      rules:
+        - alert: FlotteApiHighErrorRate
+          expr: job:flotte_http_error_ratio:rate5m > 0.05
+          for: 10m
+          labels:
+            severity: critical
+            team: backend
+          annotations:
+            summary: "Taux d'erreur HTTP élevé"
+            description: "Le taux d'erreur 5xx du service {{ $labels.exported_service }} dépasse 5% sur 10 minutes."
+
+        - alert: FlotteApiHighLatencyP95
+          expr: job:flotte_http_latency_p95_seconds:5m > 1
+          for: 10m
+          labels:
+            severity: warning
+            team: backend
+          annotations:
+            summary: "Latence p95 élevée"
+            description: "La latence p95 du service {{ $labels.exported_service }} dépasse 1 seconde sur 10 minutes."
+
+        - alert: FlotteAuthFailuresSpike
+          expr: sum by (exported_service) (rate(flotte_auth_failures_total[5m])) > 0.2
+          for: 10m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Pic d'échecs d'authentification"
+            description: "Le service {{ $labels.exported_service }} dépasse 0.2 échecs d'authentification/s sur 10 minutes."
+
+    - name: business.alerts
+      interval: 30s
+      rules:
+        - alert: FlotteMaintenanceOverdueHigh
+          expr: flotte_maintenance_overdue_total > 10
+          for: 15m
+          labels:
+            severity: warning
+            team: operations
+          annotations:
+            summary: "Trop de maintenances en retard"
+            description: "Le nombre de maintenances en retard est supérieur à 10 depuis 15 minutes."
+
+        - alert: FlotteGeoAlertsSpike
+          expr: increase(flotte_geo_alerts_total[10m]) > 30
+          for: 5m
+          labels:
+            severity: warning
+            team: operations
+          annotations:
+            summary: "Pic d'alertes géofencing"
+            description: "Plus de 30 alertes géofencing ont été générées en 10 minutes."
+
+        - alert: FlotteKafkaLagHigh
+          expr: max(flotte_kafka_consumer_lag) > 1000
+          for: 10m
+          labels:
+            severity: warning
+            team: backend
+          annotations:
+            summary: "Lag Kafka élevé"
+            description: "Le lag Kafka dépasse 1000 messages sur au moins une partition."

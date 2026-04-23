@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: fleet-ingress
+  name: vehicule-ingress
   namespace: vehicule-ns
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
@@ -17,6 +17,16 @@ spec:
             name: vehicule-service
             port:
               number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: conducteur-ingress
+  namespace: conducteur-ns
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
   - host: conducteur.local
     http:
       paths:
@@ -27,6 +37,16 @@ spec:
             name: conducteur-service
             port:
               number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: maintenance-ingress
+  namespace: maintenance-ns
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
   - host: maintenance.local
     http:
       paths:
@@ -37,6 +57,16 @@ spec:
             name: maintenance-service
             port:
               number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: localisation-ingress
+  namespace: localisation-ns
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
   - host: localisation.local
     http:
       paths:
@@ -44,9 +74,19 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: location-service
+            name: localisation-service
             port:
               number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: evenement-ingress
+  namespace: evenement-ns
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
   - host: evenement.local
     http:
       paths:

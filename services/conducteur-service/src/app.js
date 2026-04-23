@@ -1,13 +1,17 @@
+require('./tracing');
+
 const express = require('express');
 const cors = require('cors');
 const { randomUUID } = require('crypto');
 const { authenticate, requireRole } = require('./middleware/authMiddleware');
+const { httpMetricsMiddleware, recordUserCreated } = require('./metrics');
 
 const app = express();
-const port = 3001;
+const port = Number(process.env.PORT || 3001);
 
 app.use(express.json());
 app.use(cors());
+app.use(httpMetricsMiddleware);
 
 const conducteurs = new Map();
 
@@ -50,6 +54,7 @@ app.post('/conducteurs', authenticate, requireRole('admin', 'manager'), (req, re
     statut: req.body.statut,
   };
   conducteurs.set(conducteur.id, conducteur);
+  recordUserCreated('conducteur');
   return res.status(201).json(conducteur);
 });
 

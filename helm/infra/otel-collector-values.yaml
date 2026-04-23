@@ -1,37 +1,49 @@
 mode: deployment
 image:
   repository: otel/opentelemetry-collector
-  tag: "0.95.0"
+  tag: "0.149.0"
 
 config:
   receivers:
     otlp:
       protocols:
         grpc:
+          endpoint: 0.0.0.0:4317
         http:
+          endpoint: 0.0.0.0:4318
   processors:
-    batch:
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+    batch: {}
   exporters:
-    jaeger:
-      endpoint: "jaeger-collector:4317"
+    otlp/jaeger:
+      endpoint: "jaeger:4317"
       tls:
         insecure: true
     prometheus:
       endpoint: "0.0.0.0:8889"
-    loki:
-      endpoint: "http://loki:3100/loki/api/v1/push"
   service:
     pipelines:
       traces:
         receivers: [otlp]
-        processors: [batch]
-        exporters: [jaeger]
+        processors: [memory_limiter]
+        exporters: [otlp/jaeger]
       metrics:
         receivers: [otlp]
-        processors: [batch]
+        processors: [memory_limiter]
         exporters: [prometheus]
-      logs:
-        receivers: [otlp]
-        processors: [batch]
-        exporters: [loki]
+
+ports:
+  metrics:
+    enabled: true
+    containerPort: 8889
+    servicePort: 8889
+    protocol: TCP
+
+serviceMonitor:
+  enabled: true
+  extraLabels:
+    release: prometheus
 

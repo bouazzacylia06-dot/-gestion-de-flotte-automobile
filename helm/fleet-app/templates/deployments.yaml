@@ -1,0 +1,71 @@
+{{- range $svcKey, $svc := .Values.services }}
+{{- if $svc.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ $svc.namespace }}
+spec:
+  replicas: {{ $svc.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $svc.name }}
+      version: v1.0.0
+  template:
+    metadata:
+      labels:
+        app: {{ $svc.name }}
+        version: v1.0.0
+    spec:
+      {{- if $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range $secretName := $.Values.global.imagePullSecrets }}
+        - name: {{ $secretName }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ $svc.name }}
+          image: {{ $svc.image.repository }}:{{ $svc.image.tag }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ $svc.appPort }}
+          env:
+            - name: APP_PORT
+              value: {{ $svc.appPort | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ $svc.name | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ $.Values.global.otelEndpoint | quote }}
+            - name: KEYCLOAK_URL
+              value: {{ $.Values.global.keycloakUrl | quote }}
+            - name: KEYCLOAK_REALM
+              value: {{ $.Values.global.keycloakRealm | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.secrets.dbSecretName }}
+                  key: url
+            {{- if $svc.extraEnv }}
+            {{- range $envName, $envValue := $svc.extraEnv }}
+            - name: {{ $envName }}
+              value: {{ $envValue | quote }}
+            {{- end }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ $svc.appPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ $svc.appPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+{{ toYaml $svc.resources | indent 12 }}
+---
+{{- end }}
+{{- end }}

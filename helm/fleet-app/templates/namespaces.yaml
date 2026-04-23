@@ -1,0 +1,11 @@
+{{- if .Values.namespaces.create }}
+{{- range $svcKey, $svc := .Values.services }}
+{{- if $svc.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $svc.namespace }}
+---
+{{- end }}
+{{- end }}
+{{- end }}

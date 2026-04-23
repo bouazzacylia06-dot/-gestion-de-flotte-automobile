@@ -1,0 +1,49 @@
+global:
+  imagePullPolicy: IfNotPresent
+  keycloakUrl: "http://192.168.49.1:8080"
+  keycloakRealm: "flotte"
+  otelEndpoint: "http://otel-collector-opentelemetry-collector.flotte-observability.svc:4318"
+  imagePullSecrets:
+    - ghcr-creds
+
+namespaces:
+  create: false
+
+secrets:
+  create: false
+  dbSecretName: db-secrets
+  dbUrl: ""
+
+services:
+  vehicule:
+    replicas: 3
+    image:
+      repository: ghcr.io/loic-de-tlse3/vehicule-service
+      tag: "1.0.0"
+    extraEnv:
+      POSTGRES_HOST: "postgresql.flotte-infrastructure.svc.cluster.local"
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: "flotte_db"
+      POSTGRES_USER: "utilisateur_flotte"
+      POSTGRES_PASSWORD: "archi_distribuée"
+      KAFKA_BROKER: "192.168.49.1:9092"
+  conducteur:
+    replicas: 3
+    image:
+      repository: ghcr.io/loic-de-tlse3/conducteur-service
+      tag: "1.0.0"
+  maintenance:
+    replicas: 2
+    image:
+      repository: ghcr.io/loic-de-tlse3/maintenance-service
+      tag: "1.0.0"
+  localisation:
+    replicas: 2
+    image:
+      repository: ghcr.io/loic-de-tlse3/localisation-service
+      tag: "1.0.0"
+  evenement:
+    replicas: 2
+    image:
+      repository: ghcr.io/loic-de-tlse3/evenement-service
+      tag: "1.0.0"

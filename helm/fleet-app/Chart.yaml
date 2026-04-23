@@ -1,0 +1,6 @@
+apiVersion: v2
+name: fleet-app
+description: Helm chart minimal pour déployer les microservices Flotte
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

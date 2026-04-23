@@ -1,5 +1,10 @@
+require('./tracing');
+
 const { ApolloServer } = require('apollo-server');
 const axios = require('axios');
+const { recordHttpMetrics } = require('./metrics');
+
+const GATEWAY_PORT = Number(process.env.PORT || 4000);
 
 // URLs des services via noms Docker (fallback localhost pour dev local)
 const VEHICLE_URL   = process.env.VEHICLE_SERVICE_URL   || 'http://localhost:3000';
@@ -137,6 +142,9 @@ const resolvers = {
   Query: {
     vehicules: async (_, __, { authHeader }) => {
       const { data } = await axios.get(`${VEHICLE_URL}/vehicles`, { headers: { Authorization: authHeader } });
+      if (!Array.isArray(data)) {
+        throw new Error('vehicle-service /vehicles doit renvoyer un tableau. Vérifie VEHICLE_SERVICE_URL.');
+      }
       return data;
     },
     vehicule: async (_, { id }, { authHeader }) => {
@@ -262,6 +270,29 @@ const resolvers = {
 const server = new ApolloServer({
   typeDefs,
   resolvers,
+  plugins: [
+    {
+      requestDidStart() {
+        const startedAt = process.hrtime.bigint();
+
+        return {
+          willSendResponse(requestContext) {
+            const elapsedNs = Number(process.hrtime.bigint() - startedAt);
+            const durationSeconds = elapsedNs / 1_000_000_000;
+            const method = requestContext.request?.http?.method || 'POST';
+            const status = requestContext.response?.http?.status || (requestContext.errors?.length ? 500 : 200);
+
+            recordHttpMetrics({
+              route: '/graphql',
+              method,
+              status,
+              durationSeconds,
+            });
+          },
+        };
+      },
+    },
+  ],
   // Passe le header Authorization dans le contexte GraphQL pour que les resolvers le transmettent
   context: ({ req }) => ({
     authHeader: req.headers.authorization || null,
@@ -272,6 +303,13 @@ const server = new ApolloServer({
   }),
 });
 
-server.listen({ port: 4000 }).then(({ url }) => {
+server.listen({ port: GATEWAY_PORT }).then(({ url }) => {
   console.log(`GraphQL Gateway ready at ${url}`);
+  console.log('Configured upstream services:', {
+    VEHICLE_URL,
+    DRIVER_URL,
+    MAINT_URL,
+    LOCATION_URL,
+    EVENT_URL,
+  });
 }).catch(console.error);

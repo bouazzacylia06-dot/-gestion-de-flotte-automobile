@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: fleet-email
+  namespace: flotte-observability
+  labels:
+    release: prometheus
+spec:
+  route:
+    receiver: email-default
+    groupBy: ["alertname", "severity", "exported_service"]
+    groupWait: 10s
+    groupInterval: 2m
+    repeatInterval: 4h
+    routes:
+      - receiver: email-default
+        matchers:
+          - name: namespace
+            value: flotte-observability
+            matchType: "="
+  receivers:
+    - name: email-default
+      emailConfigs:
+        - to: "loic.francois44@laposte.net"
+          from: "loic.francois44@laposte.net"
+          smarthost: "smtp.laposte.net:587"
+          authUsername: "loic.francois44@laposte.net"
+          authPassword:
+            name: alertmanager-email-credentials
+            key: password
+          requireTLS: true
+          sendResolved: true
+          hello: "fleet-alertmanager"
+          headers:
+            - key: Subject
+              value: "[⚠️  Alert] {{ .CommonLabels.alertname }}"

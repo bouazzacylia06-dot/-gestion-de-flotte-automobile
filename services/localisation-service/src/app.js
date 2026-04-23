@@ -1,3 +1,5 @@
+require('./tracing');
+
 // =============================================================================
 // app.js — Point d'entrée du Service Localisation
 //
@@ -17,6 +19,7 @@ const { authenticate, requireRole } = require('./middleware/authMiddleware');
 const repository     = require('./repositories/localisationRepository');
 const grpcController = require('./controllers/grpcController');
 const kafkaProducer  = require('./kafka/producer');
+const { httpMetricsMiddleware } = require('./metrics');
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 const HTTP_PORT  = parseInt(process.env.PORT      || '3003', 10);
@@ -39,6 +42,7 @@ const { localisation: grpcPackage } = grpc.loadPackageDefinition(packageDef);
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(httpMetricsMiddleware);
 
 app.get('/', (_req, res) =>
   res.send('Service Localisation — gRPC :50051 + REST :3003 (Gestion de Flotte)')

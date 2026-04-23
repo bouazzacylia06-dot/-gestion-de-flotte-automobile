@@ -4,11 +4,23 @@
   "description": "GraphQL Gateway for Gestion Flotte microservices",
   "main": "gestion-flotte.js",
   "scripts": {
-    "start": "node gestion-flotte.js"
+    "start": "node gestion-flotte.js",
+    "test:k6:smoke": "PROFILE=smoke k6 run tests/k6/starter.js",
+    "test:k6:load": "PROFILE=load k6 run tests/k6/starter.js",
+    "test:k6:spike": "PROFILE=spike k6 run tests/k6/starter.js",
+    "test:k6:smoke:docker": "docker run --rm --network host -e PROFILE=smoke -v \"$PWD:/work\" -w /work grafana/k6 run tests/k6/starter.js",
+    "test:k6:load:docker": "docker run --rm --network host -e PROFILE=load -v \"$PWD:/work\" -w /work grafana/k6 run tests/k6/starter.js",
+    "test:k6:spike:docker": "docker run --rm --network host -e PROFILE=spike -v \"$PWD:/work\" -w /work grafana/k6 run tests/k6/starter.js"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.73.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.215.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.215.0",
+    "@opentelemetry/sdk-metrics": "^2.7.0",
+    "@opentelemetry/sdk-node": "^0.215.0",
     "apollo-server": "^3.12.0",
-    "graphql": "^16.8.1",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "graphql": "^16.8.1"
   }
 }

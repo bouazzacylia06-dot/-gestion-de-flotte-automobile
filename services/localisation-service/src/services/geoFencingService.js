@@ -12,6 +12,7 @@
 
 const repository    = require('../repositories/localisationRepository');
 const kafkaProducer = require('../kafka/producer');
+const { recordGeoAlert } = require('../metrics');
 
 // ─── Cache des zones ──────────────────────────────────────────────────────────
 
@@ -172,6 +173,11 @@ async function emitAlert(vehicleId, zone, type, latitude, longitude, timestamp) 
   const isCritical =
     (type === 'ZONE_EXIT'  && zone.type === 'AUTHORIZED') ||
     (type === 'ZONE_ENTRY' && zone.type === 'FORBIDDEN');
+
+  recordGeoAlert({
+    type,
+    severity: isCritical ? 'critical' : 'info',
+  });
 
   console.log(JSON.stringify({
     level:     isCritical ? 'WARN' : 'INFO',

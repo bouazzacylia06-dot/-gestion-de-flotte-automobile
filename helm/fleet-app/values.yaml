@@ -1,0 +1,105 @@
+global:
+  imagePullPolicy: IfNotPresent
+  keycloakUrl: "http://192.168.49.1:8080"
+  keycloakRealm: "flotte"
+  otelEndpoint: "http://otel-collector-opentelemetry-collector.flotte-observability.svc:4318"
+  imagePullSecrets: []
+
+namespaces:
+  create: true
+
+secrets:
+  create: true
+  dbSecretName: db-secrets
+  dbUrl: "postgresql://postgres:postgres@postgresql:5432/fleet"
+
+services:
+  vehicule:
+    enabled: true
+    name: vehicule-service
+    namespace: vehicule-ns
+    replicas: 2
+    appPort: 3000
+    servicePort: 80
+    image:
+      repository: vehicule-service
+      tag: latest
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+
+  conducteur:
+    enabled: true
+    name: conducteur-service
+    namespace: conducteur-ns
+    replicas: 2
+    appPort: 3001
+    servicePort: 80
+    image:
+      repository: conducteur-service
+      tag: latest
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+
+  maintenance:
+    enabled: true
+    name: maintenance-service
+    namespace: maintenance-ns
+    replicas: 2
+    appPort: 3002
+    servicePort: 80
+    image:
+      repository: maintenance-service
+      tag: latest
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+
+  localisation:
+    enabled: true
+    name: localisation-service
+    namespace: localisation-ns
+    replicas: 2
+    appPort: 3003
+    servicePort: 80
+    image:
+      repository: localisation-service
+      tag: latest
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+
+  evenement:
+    enabled: true
+    name: evenement-service
+    namespace: evenement-ns
+    replicas: 2
+    appPort: 3004
+    servicePort: 80
+    image:
+      repository: evenement-service
+      tag: latest
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"

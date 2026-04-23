@@ -89,6 +89,8 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - OTEL_SERVICE_NAME=vehicle-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
       - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_REALM=flotte
       - POSTGRES_HOST=postgres
@@ -97,6 +99,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-flotte}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-flotte123}
       - KAFKA_BROKER=kafka:9092
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,8 +123,12 @@ services:
     ports:
       - "3001:3001"
     environment:
+      - OTEL_SERVICE_NAME=conducteur-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
       - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_REALM=flotte
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       keycloak:
         condition: service_healthy   # corrigé : service_started → service_healthy
@@ -139,9 +147,13 @@ services:
     ports:
       - "3002:3002"
     environment:
+      - OTEL_SERVICE_NAME=maintenance-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
       - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_REALM=flotte
       - KAFKA_BROKER=kafka:9092
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       kafka:
         condition: service_healthy
@@ -163,6 +175,8 @@ services:
       - "3003:3003"     # HTTP REST + /health (API Gateway GraphQL)
       - "50051:50051"   # gRPC streaming GPS (traceurs embarqués)
     environment:
+      - OTEL_SERVICE_NAME=localisation-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
       - PORT=3003
       - GRPC_PORT=50051
       - KEYCLOAK_URL=http://keycloak:8080
@@ -177,6 +191,8 @@ services:
       - KAFKA_BROKER=kafka:9092
       - KAFKA_GEO_ALERTS_TOPIC=geo-alerts
       - KAFKAJS_NO_PARTITIONER_WARNING=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -199,9 +215,13 @@ services:
     ports:
       - "3004:3004"
     environment:
+      - OTEL_SERVICE_NAME=evenement-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
       - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_REALM=flotte
       - KAFKA_BROKER=kafka:9092     # ajouté : event-service est un Kafka consumer
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       keycloak:
         condition: service_healthy   # corrigé : service_started → service_healthy
@@ -224,11 +244,15 @@ services:
     ports:
       - "4000:4000"
     environment:
+      - OTEL_SERVICE_NAME=gestion-flotte-gateway
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
       - VEHICLE_SERVICE_URL=http://vehicle-service:3000
       - DRIVER_SERVICE_URL=http://driver-service:3001
       - MAINTENANCE_SERVICE_URL=http://maintenance-service:3002
       - LOCATION_SERVICE_URL=http://location-service:3003
       - EVENT_SERVICE_URL=http://event-service:3004
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       vehicle-service:
         condition: service_healthy   # corrigé : liste courte → condition: service_healthy

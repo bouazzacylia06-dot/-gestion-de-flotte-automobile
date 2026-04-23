@@ -2,7 +2,7 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
-COPY gestion-flotte.js .
+COPY gestion-flotte.js tracing.js metrics.js ./
 
 FROM node:18-alpine
 WORKDIR /app

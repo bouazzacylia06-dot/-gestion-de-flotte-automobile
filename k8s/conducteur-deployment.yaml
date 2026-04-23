@@ -24,6 +24,14 @@ spec:
           env:
             - name: APP_PORT
               value: "3001"
+            - name: OTEL_SERVICE_NAME
+              value: "conducteur-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector-opentelemetry-collector.flotte-observability.svc:4318"
+            - name: KEYCLOAK_URL
+              value: "http://192.168.49.1:8080"
+            - name: KEYCLOAK_REALM
+              value: "flotte"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -38,7 +46,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /ready
+              path: /health
               port: 3001
             initialDelaySeconds: 5
             periodSeconds: 5
