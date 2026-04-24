@@ -13,7 +13,19 @@ app.use(express.json());
 app.use(cors());
 app.use(httpMetricsMiddleware);
 
-const conducteurs = new Map();
+const SEED_CONDUCTEURS = [
+  { id: 'c1000000-0001-4000-b000-000000000001', nom: 'Martin',    prenom: 'Julien',    numeroPermis: '07-0512-0001', statut: 'actif' },
+  { id: 'c1000000-0001-4000-b000-000000000002', nom: 'Dupont',    prenom: 'Sophie',    numeroPermis: '07-0512-0002', statut: 'actif' },
+  { id: 'c1000000-0001-4000-b000-000000000003', nom: 'Bernard',   prenom: 'Thomas',    numeroPermis: '07-0512-0003', statut: 'actif' },
+  { id: 'c1000000-0001-4000-b000-000000000004', nom: 'Leclerc',   prenom: 'Marie',     numeroPermis: '07-0512-0004', statut: 'actif' },
+  { id: 'c1000000-0001-4000-b000-000000000005', nom: 'Moreau',    prenom: 'Pierre',    numeroPermis: '07-0512-0005', statut: 'actif' },
+  { id: 'c1000000-0001-4000-b000-000000000006', nom: 'Simon',     prenom: 'Claire',    numeroPermis: '07-0512-0006', statut: 'inactif' },
+  { id: 'c1000000-0001-4000-b000-000000000007', nom: 'Laurent',   prenom: 'Antoine',   numeroPermis: '07-0512-0007', statut: 'actif' },
+  { id: 'c1000000-0001-4000-b000-000000000008', nom: 'Petit',     prenom: 'Isabelle',  numeroPermis: '07-0512-0008', statut: 'actif' },
+  { id: 'c1000000-0001-4000-b000-000000000009', nom: 'Garcia',    prenom: 'Nicolas',   numeroPermis: '07-0512-0009', statut: 'suspendu' },
+  { id: 'c1000000-0001-4000-b000-000000000010', nom: 'Roux',      prenom: 'Camille',   numeroPermis: '07-0512-0010', statut: 'actif' },
+];
+const conducteurs = new Map(SEED_CONDUCTEURS.map((c) => [c.id, c]));
 
 const isValidPayload = (body) =>
   body &&

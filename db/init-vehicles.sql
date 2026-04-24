@@ -43,3 +43,29 @@ CREATE TRIGGER update_vehicles_updated_at
     BEFORE UPDATE ON service_vehicles.vehicles
     FOR EACH ROW
     EXECUTE FUNCTION service_vehicles.update_updated_at_column();
+
+-- =============================================================================
+-- Données initiales — 20 véhicules normands réalistes
+-- =============================================================================
+INSERT INTO service_vehicles.vehicles (id, immatriculation, marque, "modèle", statut) VALUES
+  ('11000000-0000-4000-a000-000000000001', 'AA-001-RN', 'Renault',    'Kangoo',              'IN_USE'),
+  ('11000000-0000-4000-a000-000000000002', 'AA-002-RN', 'Renault',    'Trafic',              'AVAILABLE'),
+  ('11000000-0000-4000-a000-000000000003', 'AA-003-PG', 'Peugeot',    'Partner',             'IN_USE'),
+  ('11000000-0000-4000-a000-000000000004', 'AA-004-PG', 'Peugeot',    'Expert',              'MAINTENANCE'),
+  ('11000000-0000-4000-a000-000000000005', 'AA-005-CT', 'Citroën',    'Berlingo',            'AVAILABLE'),
+  ('11000000-0000-4000-a000-000000000006', 'AA-006-CT', 'Citroën',    'Jumpy',               'IN_USE'),
+  ('11000000-0000-4000-a000-000000000007', 'AA-007-RN', 'Renault',    'Master',              'AVAILABLE'),
+  ('11000000-0000-4000-a000-000000000008', 'AA-008-PG', 'Peugeot',    'Boxer',               'IN_USE'),
+  ('11000000-0000-4000-a000-000000000009', 'AA-009-VW', 'Volkswagen', 'Transporter',         'MAINTENANCE'),
+  ('11000000-0000-4000-a000-000000000010', 'AA-010-TY', 'Toyota',     'ProAce',              'AVAILABLE'),
+  ('11000000-0000-4000-a000-000000000011', 'AA-011-RN', 'Renault',    'Mégane',              'IN_USE'),
+  ('11000000-0000-4000-a000-000000000012', 'AA-012-PG', 'Peugeot',    '308',                 'AVAILABLE'),
+  ('11000000-0000-4000-a000-000000000013', 'AA-013-CT', 'Citroën',    'C4',                  'IN_USE'),
+  ('11000000-0000-4000-a000-000000000014', 'AA-014-TY', 'Toyota',     'Corolla',             'AVAILABLE'),
+  ('11000000-0000-4000-a000-000000000015', 'AA-015-VW', 'Volkswagen', 'Golf',                'IN_USE'),
+  ('11000000-0000-4000-a000-000000000016', 'AA-016-RN', 'Renault',    'Clio',                'AVAILABLE'),
+  ('11000000-0000-4000-a000-000000000017', 'AA-017-PG', 'Peugeot',    '208',                 'IN_USE'),
+  ('11000000-0000-4000-a000-000000000018', 'AA-018-CT', 'Citroën',    'Jumper',              'AVAILABLE'),
+  ('11000000-0000-4000-a000-000000000019', 'AA-019-TY', 'Toyota',     'RAV4',                'RETIRED'),
+  ('11000000-0000-4000-a000-000000000020', 'AA-020-RN', 'Renault',    'Kadjar',              'AVAILABLE')
+ON CONFLICT (id) DO NOTHING;
