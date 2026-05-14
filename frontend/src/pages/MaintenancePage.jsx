@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/useAuth';
+import { useTranslation } from 'react-i18next';
 import { useMaintenances, useCreateMaintenance, useUpdateMaintenance, useDeleteMaintenance } from '../hooks/useMaintenances';
 import { useVehicules } from '../hooks/useVehicles';
 import MaintenanceTable from '../components/maintenance/MaintenanceTable';
@@ -8,14 +9,14 @@ import MaintenanceBadge from '../components/maintenance/MaintenanceBadge';
 
 function Modal({ title, icon, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg mx-4">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-white to-gray-50 rounded-t-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-fleet-card rounded-2xl shadow-2xl border border-fleet-border w-full max-w-lg mx-4">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-fleet-border bg-slate-800/30 rounded-t-2xl">
           <div className="flex items-center gap-3">
             {icon && <span className="text-xl">{icon}</span>}
-            <h2 className="font-semibold text-gray-800">{title}</h2>
+            <h2 className="font-semibold text-slate-200">{title}</h2>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">✕</button>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors">✕</button>
         </div>
         <div className="px-6 py-5">{children}</div>
       </div>
@@ -30,12 +31,13 @@ const TYPE_LABELS = {
 };
 
 const KANBAN_COLS = [
-  { keys: ['planifie', 'planifiee'], label: 'Planifiée',  color: 'border-t-blue-400',   bg: 'bg-blue-50',   hdr: 'text-blue-700' },
-  { keys: ['en_cours'],              label: 'En cours',   color: 'border-t-orange-400', bg: 'bg-orange-50', hdr: 'text-orange-700' },
-  { keys: ['termine', 'terminee'],   label: 'Terminée',   color: 'border-t-green-400',  bg: 'bg-green-50',  hdr: 'text-green-700' },
+  { keys: ['planifie', 'planifiee'], label: 'Planifiée',  border: 'border-t-blue-500',    bg: 'bg-blue-500/10',   hdr: 'text-blue-400' },
+  { keys: ['en_cours'],              label: 'En cours',   border: 'border-t-orange-500',  bg: 'bg-orange-500/10', hdr: 'text-orange-400' },
+  { keys: ['termine', 'terminee'],   label: 'Terminée',   border: 'border-t-green-500',   bg: 'bg-green-500/10',  hdr: 'text-green-400' },
 ];
 
 export default function MaintenancePage() {
+  const { t } = useTranslation();
   const { hasRole } = useAuth();
   const { maintenances, loading, error } = useMaintenances();
   const { vehicules } = useVehicules();
@@ -71,7 +73,7 @@ export default function MaintenancePage() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Supprimer cette intervention ?')) {
+    if (window.confirm(t('maintenance.confirmDelete'))) {
       await deleteMaintenance({ variables: { id } });
     }
   };
@@ -86,12 +88,12 @@ export default function MaintenancePage() {
   if (loading) {
     return (
       <div className="space-y-5">
-        <div className="h-8 w-40 bg-gray-200 rounded animate-pulse" />
+        <div className="h-8 w-40 bg-slate-800 rounded animate-pulse" />
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl border border-gray-200 bg-white p-4 animate-pulse">
-              <div className="h-4 w-24 bg-gray-200 rounded mb-3" />
-              {[1, 2, 3].map((j) => <div key={j} className="h-16 bg-gray-100 rounded mb-2" />)}
+            <div key={i} className="rounded-xl border border-fleet-border bg-fleet-card p-4 animate-pulse">
+              <div className="h-4 w-24 bg-slate-800 rounded mb-3" />
+              {[1, 2, 3].map((j) => <div key={j} className="h-16 bg-slate-800 rounded mb-2" />)}
             </div>
           ))}
         </div>
@@ -100,42 +102,42 @@ export default function MaintenancePage() {
   }
 
   if (error) {
-    return <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-600">Erreur : {error.message}</div>;
+    return <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-red-400">Erreur : {error.message}</div>;
   }
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Maintenance</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-white">{t('maintenance.title')}</h1>
+          <p className="text-sm text-slate-400 mt-0.5">
             {maintenances.length} intervention{maintenances.length > 1 ? 's' : ''} · {nbPlanifies} planifiée{nbPlanifies > 1 ? 's' : ''} · {nbEnCours} en cours · {nbTermines} terminée{nbTermines > 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex gap-2">
-          <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+          <div className="flex bg-slate-800 rounded-xl p-1 gap-1 border border-fleet-border">
             <button
               onClick={() => setView('table')}
-              className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-all ${view === 'table' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-all ${view === 'table' ? 'bg-fleet-card text-slate-200 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
             >
-              Table
+              {t('maintenance.viewTable')}
             </button>
             <button
               onClick={() => setView('kanban')}
-              className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-all ${view === 'kanban' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-all ${view === 'kanban' ? 'bg-fleet-card text-slate-200 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
             >
-              Kanban
+              {t('maintenance.viewKanban')}
             </button>
           </div>
           {canEdit && (
             <button
               onClick={openCreate}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition-all"
+              className="bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition-all"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Signaler un problème
+              {t('maintenance.report')}
             </button>
           )}
         </div>
@@ -154,43 +156,43 @@ export default function MaintenancePage() {
           {KANBAN_COLS.map((col) => {
             const items = maintenances.filter((m) => col.keys.includes(m.status?.toLowerCase()));
             return (
-              <div key={col.label} className={`rounded-xl border-t-4 border border-gray-200 bg-white shadow-sm ${col.color}`}>
+              <div key={col.label} className={`rounded-xl border-t-4 border border-fleet-border bg-fleet-card shadow-card ${col.border}`}>
                 <div className={`px-4 py-3 flex items-center justify-between ${col.bg} rounded-t-lg`}>
                   <h3 className={`font-semibold text-sm ${col.hdr}`}>{col.label}</h3>
-                  <span className="text-xs bg-white px-2 py-0.5 rounded-full text-gray-500 border font-medium">
+                  <span className="text-xs bg-fleet-card px-2 py-0.5 rounded-full text-slate-400 border border-fleet-border font-medium">
                     {items.length}
                   </span>
                 </div>
                 <div className="p-3 space-y-2 min-h-32">
                   {items.map((m) => (
-                    <div key={m.id} className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={m.id} className="bg-fleet-card2 rounded-xl border border-fleet-border p-3 hover:border-slate-600 transition-all">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-mono text-gray-400 truncate">…{m.vehicleId?.slice(-8)}</p>
-                          <p className="font-semibold text-gray-800 capitalize mt-0.5 text-sm">
+                          <p className="text-xs font-mono text-slate-500 truncate">…{m.vehicleId?.slice(-8)}</p>
+                          <p className="font-semibold text-slate-200 capitalize mt-0.5 text-sm">
                             {TYPE_LABELS[m.type?.toLowerCase()] || m.type}
                           </p>
                         </div>
                         <MaintenanceBadge status={m.status} />
                       </div>
-                      <p className="text-xs text-gray-400 mt-1.5">
+                      <p className="text-xs text-slate-500 mt-1.5">
                         {new Date(m.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </p>
                       {m.cost > 0 && (
-                        <p className="text-xs font-semibold text-gray-600 mt-1">
+                        <p className="text-xs font-semibold text-slate-400 mt-1">
                           {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(m.cost)}
                         </p>
                       )}
                       {canEdit && (
-                        <div className="flex gap-1 mt-2 pt-2 border-t border-gray-50">
+                        <div className="flex gap-1 mt-2 pt-2 border-t border-fleet-border">
                           <button onClick={() => openEdit(m)}
-                            className="text-xs text-gray-500 hover:text-gray-700 font-medium px-2 py-1 rounded hover:bg-gray-50 transition-colors">
-                            Modifier
+                            className="text-xs text-slate-400 hover:text-slate-200 font-medium px-2 py-1 rounded hover:bg-slate-700 transition-colors">
+                            {t('maintenance.editBtn')}
                           </button>
                           {canDelete && (
                             <button onClick={() => handleDelete(m.id)}
-                              className="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors">
-                              Supprimer
+                              className="text-xs text-red-400 hover:text-red-300 font-medium px-2 py-1 rounded hover:bg-red-500/10 transition-colors">
+                              {t('maintenance.deleteBtn')}
                             </button>
                           )}
                         </div>
@@ -198,7 +200,7 @@ export default function MaintenancePage() {
                     </div>
                   ))}
                   {items.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-8 text-gray-300">
+                    <div className="flex flex-col items-center justify-center py-8 text-slate-600">
                       <svg className="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
@@ -213,7 +215,7 @@ export default function MaintenancePage() {
       )}
 
       {modal === 'create' && (
-        <Modal title="Nouvelle intervention" icon="🔧" onClose={() => setModal(null)}>
+        <Modal title={t('maintenance.report')} icon="🔧" onClose={() => setModal(null)}>
           <MaintenanceForm
             vehicules={vehicules}
             onSubmit={handleCreate}

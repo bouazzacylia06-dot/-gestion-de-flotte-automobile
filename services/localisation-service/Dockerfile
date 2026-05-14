@@ -31,9 +31,10 @@ USER nodejs
 
 # Port HTTP — REST API + /health (API Gateway + Docker healthcheck)
 EXPOSE 3003
-# Port gRPC — streaming GPS bidirectionnel (traceurs embarqués)
 EXPOSE 50051
 
-# Commande pour démarrer l'application
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3003/health || exit 1
+
 CMD ["node", "src/app.js"]
 

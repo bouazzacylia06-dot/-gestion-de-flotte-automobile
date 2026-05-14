@@ -79,12 +79,11 @@ CREATE INDEX IF NOT EXISTS idx_zones_active
 CREATE TABLE IF NOT EXISTS service_localisation.geo_alerts (
     id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
     vehicle_id UUID        NOT NULL,
-    zone_id    UUID        NOT NULL
-               REFERENCES service_localisation.zones_geofencing(id),
+    zone_id    UUID        REFERENCES service_localisation.zones_geofencing(id),
     type       TEXT        NOT NULL
-               CONSTRAINT chk_alert_type CHECK (type IN ('ZONE_ENTRY', 'ZONE_EXIT')),
-    latitude   DOUBLE PRECISION NOT NULL,
-    longitude  DOUBLE PRECISION NOT NULL,
+               CONSTRAINT chk_alert_type CHECK (type IN ('ZONE_ENTRY', 'ZONE_EXIT', 'FORBIDDEN', 'SPEED')),
+    latitude   DOUBLE PRECISION,
+    longitude  DOUBLE PRECISION,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

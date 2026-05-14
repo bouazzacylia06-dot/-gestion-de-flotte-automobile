@@ -1,0 +1,59 @@
+{{- if .Values.gateway.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/component: gateway
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: gateway
+  ports:
+    - name: http
+      port: {{ .Values.gateway.port }}
+      targetPort: http
+      protocol: TCP
+---
+{{- if .Values.gateway.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gateway-hpa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: gateway
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gateway
+  minReplicas: {{ .Values.gateway.hpa.minReplicas }}
+  maxReplicas: {{ .Values.gateway.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.gateway.hpa.cpuUtilization }}
+---
+{{- end }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gateway-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: gateway
+spec:
+  minAvailable: {{ .Values.gateway.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+{{- end }}

@@ -5,12 +5,21 @@
   "main": "gestion-flotte.js",
   "scripts": {
     "start": "node gestion-flotte.js",
+    "test:i18n": "jest tests/i18n --verbose --forceExit",
     "test:k6:smoke": "PROFILE=smoke k6 run tests/k6/starter.js",
     "test:k6:load": "PROFILE=load k6 run tests/k6/starter.js",
     "test:k6:spike": "PROFILE=spike k6 run tests/k6/starter.js",
     "test:k6:smoke:docker": "docker run --rm --network host -e PROFILE=smoke -v \"$PWD:/work\" -w /work grafana/k6 run tests/k6/starter.js",
     "test:k6:load:docker": "docker run --rm --network host -e PROFILE=load -v \"$PWD:/work\" -w /work grafana/k6 run tests/k6/starter.js",
     "test:k6:spike:docker": "docker run --rm --network host -e PROFILE=spike -v \"$PWD:/work\" -w /work grafana/k6 run tests/k6/starter.js"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/tests"],
+    "testMatch": ["**/*.test.js"]
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",

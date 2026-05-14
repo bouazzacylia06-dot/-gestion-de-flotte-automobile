@@ -1,0 +1,196 @@
+---
+# Namespace infrastructure partagée
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fleet-infra
+---
+# ConfigMap — scripts SQL d'initialisation
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-sql
+  namespace: fleet-infra
+data:
+  01-init-vehicles.sql: |
+    CREATE SCHEMA IF NOT EXISTS service_vehicles;
+
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vehicle_status_enum') THEN
+            CREATE TYPE vehicle_status_enum AS ENUM (
+                'AVAILABLE', 'IN_USE', 'MAINTENANCE', 'RETIRED'
+            );
+        END IF;
+    END $$;
+
+    CREATE TABLE IF NOT EXISTS service_vehicles.vehicles (
+        id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        immatriculation VARCHAR(20) NOT NULL,
+        marque        VARCHAR(100) NOT NULL,
+        "modèle"      VARCHAR(100) NOT NULL,
+        statut        vehicle_status_enum NOT NULL DEFAULT 'AVAILABLE',
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT uk_vehicles_immatriculation UNIQUE (immatriculation)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_vehicles_statut ON service_vehicles.vehicles(statut);
+    CREATE INDEX IF NOT EXISTS idx_vehicles_marque  ON service_vehicles.vehicles(marque);
+
+    CREATE OR REPLACE FUNCTION service_vehicles.update_updated_at_column()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        NEW.updated_at = CURRENT_TIMESTAMP;
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS update_vehicles_updated_at ON service_vehicles.vehicles;
+    CREATE TRIGGER update_vehicles_updated_at
+        BEFORE UPDATE ON service_vehicles.vehicles
+        FOR EACH ROW
+        EXECUTE FUNCTION service_vehicles.update_updated_at_column();
+
+  02-init-localisation.sql: |
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE SCHEMA IF NOT EXISTS service_localisation;
+
+    CREATE TABLE IF NOT EXISTS service_localisation.positions (
+        time           TIMESTAMPTZ      NOT NULL,
+        vehicle_id     UUID             NOT NULL,
+        latitude       DOUBLE PRECISION NOT NULL
+                       CONSTRAINT chk_lat CHECK (latitude  >= -90  AND latitude  <=  90),
+        longitude      DOUBLE PRECISION NOT NULL
+                       CONSTRAINT chk_lon CHECK (longitude >= -180 AND longitude <= 180),
+        speed          REAL,
+        heading        REAL,
+        correlation_id TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_positions_vehicle_time
+        ON service_localisation.positions (vehicle_id, time DESC);
+
+    CREATE TABLE IF NOT EXISTS service_localisation.zones_geofencing (
+        id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name       TEXT        NOT NULL,
+        type       TEXT        NOT NULL
+                   CONSTRAINT chk_zone_type CHECK (type IN ('AUTHORIZED', 'FORBIDDEN')),
+        polygon    JSONB       NOT NULL,
+        active     BOOLEAN     NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS service_localisation.geo_alerts (
+        id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+        vehicle_id UUID        NOT NULL,
+        zone_id    UUID        NOT NULL
+                   REFERENCES service_localisation.zones_geofencing(id),
+        type       TEXT        NOT NULL
+                   CONSTRAINT chk_alert_type CHECK (type IN ('ZONE_ENTRY', 'ZONE_EXIT')),
+        latitude   DOUBLE PRECISION NOT NULL,
+        longitude  DOUBLE PRECISION NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+---
+# Secret credentials PostgreSQL
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-credentials
+  namespace: fleet-infra
+type: Opaque
+stringData:
+  POSTGRES_USER: flotte
+  POSTGRES_PASSWORD: flotte123
+  POSTGRES_DB: fleet
+---
+# StatefulSet PostgreSQL
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: fleet-infra
+spec:
+  serviceName: postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_DB
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "flotte", "-d", "fleet"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "flotte", "-d", "fleet"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: init-sql
+          configMap:
+            name: postgres-init-sql
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+---
+# Service PostgreSQL — accessible depuis tous les namespaces via FQDN
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: fleet-infra
+spec:
+  selector:
+    app: postgresql
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None

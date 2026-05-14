@@ -1,0 +1,156 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "fleet.fullname" . }}-keycloak-realm-import
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak-setup
+  annotations:
+    # This hook runs AFTER all resources are installed (realm import requires Keycloak to be running)
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-realm-import
+        app.kubernetes.io/component: keycloak-setup
+        app.kubernetes.io/part-of: fleet-management
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "fleet.serviceAccountName" . }}
+      initContainers:
+        - name: wait-for-keycloak
+          image: curlimages/curl:8.5.0
+          command:
+            - sh
+            - -c
+            - |
+              until curl -sf http://keycloak:{{ .Values.keycloak.port }}/health/ready; do
+                echo "Waiting for Keycloak at keycloak:{{ .Values.keycloak.port }}...";
+                sleep 10;
+              done;
+              echo "Keycloak is ready."
+      containers:
+        - name: realm-import
+          image: curlimages/curl:8.5.0
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "Authenticating with Keycloak admin..."
+              TOKEN=$(curl -sf \
+                -X POST "http://keycloak:{{ .Values.keycloak.port }}/realms/master/protocol/openid-connect/token" \
+                -H "Content-Type: application/x-www-form-urlencoded" \
+                -d "username=${KEYCLOAK_ADMIN}" \
+                -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+                -d "grant_type=password" \
+                -d "client_id=admin-cli" \
+                | sed 's/.*"access_token":"\([^"]*\)".*/\1/')
+
+              echo "Checking if realm 'flotte' already exists..."
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: Bearer ${TOKEN}" \
+                "http://keycloak:{{ .Values.keycloak.port }}/admin/realms/flotte")
+
+              if [ "$STATUS" = "200" ]; then
+                echo "Realm 'flotte' already exists. Skipping import."
+              else
+                echo "Importing realm 'flotte'..."
+                curl -sf \
+                  -X POST "http://keycloak:{{ .Values.keycloak.port }}/admin/realms" \
+                  -H "Authorization: Bearer ${TOKEN}" \
+                  -H "Content-Type: application/json" \
+                  --data-binary @/realm/realm-flotte.json
+                echo "Realm import complete."
+              fi
+          env:
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet.keycloakSecretName" . }}
+                  key: KEYCLOAK_ADMIN
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet.keycloakSecretName" . }}
+                  key: KEYCLOAK_ADMIN_PASSWORD
+          volumeMounts:
+            - name: realm-config
+              mountPath: /realm
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+      volumes:
+        - name: realm-config
+          configMap:
+            name: {{ include "fleet.fullname" . }}-realm-config
+---
+# ConfigMap holding the Keycloak realm JSON (abbreviated — mount full file in production via external-secrets or Helm file)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "fleet.fullname" . }}-realm-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+data:
+  realm-flotte.json: |
+    {
+      "realm": "flotte",
+      "enabled": true,
+      "displayName": "Flotte Automobile",
+      "registrationAllowed": false,
+      "loginWithEmailAllowed": true,
+      "duplicateEmailsAllowed": false,
+      "resetPasswordAllowed": true,
+      "editUsernameAllowed": false,
+      "bruteForceProtected": true,
+      "clients": [
+        {
+          "clientId": "flotte-app",
+          "enabled": true,
+          "publicClient": true,
+          "redirectUris": ["*"],
+          "webOrigins": ["*"],
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": true
+        },
+        {
+          "clientId": "fleet-gateway",
+          "enabled": true,
+          "publicClient": false,
+          "bearerOnly": true
+        }
+      ],
+      "roles": {
+        "realm": [
+          {"name": "fleet-admin", "description": "Full system access"},
+          {"name": "fleet-manager", "description": "Manage vehicles and drivers"},
+          {"name": "fleet-viewer", "description": "Read-only access"},
+          {"name": "fleet-driver", "description": "Driver self-service"}
+        ]
+      },
+      "users": [
+        {
+          "username": "admin",
+          "enabled": true,
+          "email": "admin@fleet.local",
+          "credentials": [{"type": "password", "value": "admin", "temporary": false}],
+          "realmRoles": ["fleet-admin"]
+        }
+      ]
+    }

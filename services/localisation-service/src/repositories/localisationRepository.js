@@ -153,17 +153,31 @@ async function saveGeoAlert(vehicleId, zoneId, type, latitude, longitude) {
   );
 }
 
+async function getRecentGeoAlerts(limit = 50) {
+  const { rows } = await pool.query(
+    `SELECT id, vehicle_id AS "vehicleId", zone_id AS "zoneId",
+            type, latitude, longitude, created_at AS "createdAt"
+     FROM ${SCHEMA}.geo_alerts
+     ORDER BY created_at DESC
+     LIMIT $1`,
+    [limit]
+  );
+  return rows;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Convertit une ligne PostgreSQL en objet GPSData (compatible proto gRPC). */
+/** Convertit une ligne PostgreSQL en objet GPSData. */
 function rowToGpsData(row) {
+  const ts = row.time.getTime();
   return {
-    vehicleId:     row.vehicle_id,
+    id:            `${row.vehicle_id}-${ts}`,
+    vehiculeId:    row.vehicle_id,
     latitude:      parseFloat(row.latitude),
     longitude:     parseFloat(row.longitude),
     speed:         row.speed   ? parseFloat(row.speed)   : 0,
     heading:       row.heading ? parseFloat(row.heading) : 0,
-    timestamp:     row.time.getTime(), // TIMESTAMPTZ → epoch ms
+    timestamp:     ts,
     correlationId: row.correlation_id || '',
   };
 }
@@ -175,4 +189,5 @@ module.exports = {
   getHourlyAverage,
   getActiveZones,
   saveGeoAlert,
+  getRecentGeoAlerts,
 };

@@ -32,6 +32,20 @@ spec:
               value: "http://192.168.49.1:8080"
             - name: KEYCLOAK_REALM
               value: "flotte"
+            - name: KAFKA_BROKER
+              value: "192.168.49.1:9094"
+            - name: KAFKA_GEO_ALERTS_TOPIC
+              value: "geo-alerts"
+            - name: TIMESCALEDB_HOST
+              value: "postgresql.fleet-infra.svc.cluster.local"
+            - name: TIMESCALEDB_PORT
+              value: "5432"
+            - name: TIMESCALEDB_DB
+              value: "fleet"
+            - name: TIMESCALEDB_USER
+              value: "flotte"
+            - name: TIMESCALEDB_PASSWORD
+              value: "flotte123"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

@@ -37,6 +37,7 @@ const typeDefs = `#graphql
     prenom: String!
     numeroPermis: String!
     statut: String!
+    vehiculeId: ID
   }
 
   input ConducteurInput {
@@ -44,6 +45,7 @@ const typeDefs = `#graphql
     prenom: String!
     numeroPermis: String!
     statut: String!
+    vehiculeId: ID
   }
 
   # --- Maintenance ---
@@ -91,6 +93,25 @@ const typeDefs = `#graphql
     date: String!
   }
 
+  # --- GeoAlerte ---
+  type GeoAlerte {
+    id: ID!
+    vehicleId: ID!
+    zoneId: String
+    type: String!
+    latitude: Float
+    longitude: Float
+    createdAt: String!
+  }
+
+  input GeoAlerteInput {
+    vehicleId: ID!
+    type: String!
+    zoneId: String
+    latitude: Float
+    longitude: Float
+  }
+
   input EvenementInput {
     vehiculeId: ID!
     type: String!
@@ -112,6 +133,7 @@ const typeDefs = `#graphql
     localisation(id: ID!): Localisation
     positionHistory(vehicleId: ID!, from: String, to: String, limit: Int): [Localisation!]!
     vehiculeLastPosition(vehicleId: ID!): Localisation
+    geoAlertes(limit: Int): [GeoAlerte!]!
 
     evenements: [Evenement!]!
     evenement(id: ID!): Evenement
@@ -125,6 +147,7 @@ const typeDefs = `#graphql
     createConducteur(input: ConducteurInput!): Conducteur!
     updateConducteur(id: ID!, input: ConducteurInput!): Conducteur!
     deleteConducteur(id: ID!): Boolean!
+    assignVehiculeToConducteur(conducteurId: ID!, vehiculeId: ID): Conducteur!
 
     createMaintenance(input: MaintenanceInput!): Maintenance!
     updateMaintenance(id: ID!, input: MaintenanceInput!): Maintenance!
@@ -135,6 +158,8 @@ const typeDefs = `#graphql
 
     createEvenement(input: EvenementInput!): Evenement!
     deleteEvenement(id: ID!): Boolean!
+
+    createGeoAlerte(input: GeoAlerteInput!): GeoAlerte!
   }
 `;
 
@@ -190,11 +215,28 @@ const resolvers = {
       return data;
     },
     vehiculeLastPosition: async (_, { vehicleId }, { authHeader }) => {
-      const { data } = await axios.get(
-        `${LOCATION_URL}/localisations/last/${vehicleId}`,
-        { headers: { Authorization: authHeader } }
-      );
-      return data;
+      try {
+        const { data } = await axios.get(
+          `${LOCATION_URL}/localisations/last/${vehicleId}`,
+          { headers: { Authorization: authHeader } }
+        );
+        return data;
+      } catch (err) {
+        if (err.response?.status === 404) return null;
+        throw err;
+      }
+    },
+
+    geoAlertes: async (_, { limit = 50 }, { authHeader }) => {
+      try {
+        const { data } = await axios.get(
+          `${LOCATION_URL}/localisations/geo-alerts?limit=${limit}`,
+          { headers: { Authorization: authHeader } }
+        );
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
     },
 
     evenements: async (_, __, { authHeader }) => {
@@ -233,6 +275,14 @@ const resolvers = {
       await axios.delete(`${DRIVER_URL}/conducteurs/${id}`, { headers: { Authorization: authHeader } });
       return true;
     },
+    assignVehiculeToConducteur: async (_, { conducteurId, vehiculeId }, { authHeader }) => {
+      const { data } = await axios.patch(
+        `${DRIVER_URL}/conducteurs/${conducteurId}/assign`,
+        { vehiculeId: vehiculeId || null },
+        { headers: { Authorization: authHeader } }
+      );
+      return data;
+    },
 
     createMaintenance: async (_, { input }, { authHeader }) => {
       const { data } = await axios.post(`${MAINT_URL}/maintenance`, input, { headers: { Authorization: authHeader } });
@@ -263,6 +313,15 @@ const resolvers = {
     deleteEvenement: async (_, { id }, { authHeader }) => {
       await axios.delete(`${EVENT_URL}/evenements/${id}`, { headers: { Authorization: authHeader } });
       return true;
+    },
+
+    createGeoAlerte: async (_, { input }, { authHeader }) => {
+      const { data } = await axios.post(
+        `${LOCATION_URL}/localisations/geo-alerts`,
+        input,
+        { headers: { Authorization: authHeader } }
+      );
+      return data;
     },
   },
 };

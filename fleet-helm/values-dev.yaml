@@ -1,0 +1,180 @@
+# ============================================================
+# Fleet Management System — Development Overrides
+# Usage: helm install fleet ./fleet-helm -f values-dev.yaml -n fleet-dev
+# ============================================================
+
+global:
+  imagePullPolicy: IfNotPresent
+  logLevel: debug
+  otel:
+    endpoint: "http://otel-collector.fleet-dev.svc:4318"
+  keycloak:
+    url: "http://keycloak.fleet-dev.svc:8080"
+    realm: "flotte"
+
+# ── Dev: single replicas, reduced resources ───────────────────────────────
+postgres:
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  persistence:
+    size: 2Gi
+
+kafka:
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  persistence:
+    size: 2Gi
+
+keycloak:
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+vehicleService:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+
+driverService:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+
+maintenanceService:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+
+locationService:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "75m"
+      memory: "96Mi"
+    limits:
+      cpu: "300m"
+      memory: "384Mi"
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+
+eventService:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+
+gateway:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "400m"
+      memory: "512Mi"
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+
+frontend:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "25m"
+      memory: "32Mi"
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+
+featureFlags:
+  replicas: 1
+
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  tls:
+    enabled: false
+  hosts:
+    api: api.fleet.dev
+    auth: auth.fleet.dev
+    monitoring: monitoring.fleet.dev
+    app: app.fleet.dev
+
+networkPolicy:
+  enabled: false
+
+podSecurityContext:
+  runAsNonRoot: false
+
+securityContext:
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false

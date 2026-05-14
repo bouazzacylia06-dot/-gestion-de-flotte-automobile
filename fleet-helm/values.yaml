@@ -1,0 +1,445 @@
+# ============================================================
+# Fleet Management System — Default Helm Values
+# Override with values-dev.yaml or values-prod.yaml
+# ============================================================
+
+global:
+  imageRegistry: ""
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  namespace: fleet
+  logLevel: info
+  otel:
+    endpoint: "http://otel-collector:4318"
+  keycloak:
+    url: "http://keycloak:8080"
+    realm: "flotte"
+
+# ── Secrets (base64 values are set via --set or external secret manager) ──
+secrets:
+  postgres:
+    user: "ZmxvdHRl"           # flotte (base64)
+    password: "Zmxvdde0MTIz"   # flotte123 (base64)
+    db: "ZmxlZXQ="             # fleet (base64)
+  keycloak:
+    adminUser: "YWRtaW4="      # admin (base64)
+    adminPassword: "YWRtaW4="  # admin (base64)
+  kafka:
+    clusterId: "TzVCNzZCMjY0NkI3NEU4Qg==" # O5B76B2646B74E8B (base64)
+
+# ── ConfigMap: shared non-sensitive configuration ──────────────────────────
+config:
+  kafka:
+    broker: "kafka:9092"
+    topics:
+      vehicleEvents: "vehicle-events"
+      driverEvents: "driver-events"
+      maintenanceEvents: "maintenance-events"
+      geoAlerts: "geo-alerts"
+      fleetEvents: "fleet-events"
+  postgres:
+    host: "postgres"
+    port: "5432"
+    database: "fleet"
+
+# ── PostgreSQL / TimescaleDB ───────────────────────────────────────────────
+postgres:
+  enabled: true
+  image:
+    repository: timescale/timescaledb-ha
+    tag: pg15-latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 5432
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 45
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Apache Kafka ───────────────────────────────────────────────────────────
+kafka:
+  enabled: true
+  image:
+    repository: apache/kafka
+    tag: "3.8.1"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 9092
+  controllerPort: 9093
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Keycloak ───────────────────────────────────────────────────────────────
+keycloak:
+  enabled: true
+  image:
+    repository: quay.io/keycloak/keycloak
+    tag: "23.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8080
+  resources:
+    requests:
+      cpu: "300m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 10
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+# ── Vehicle Service ────────────────────────────────────────────────────────
+vehicleService:
+  enabled: true
+  image:
+    repository: vehicule-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 70
+  pdb:
+    minAvailable: 1
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Driver Service ─────────────────────────────────────────────────────────
+driverService:
+  enabled: true
+  image:
+    repository: conducteur-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 3001
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 70
+  pdb:
+    minAvailable: 1
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Maintenance Service ────────────────────────────────────────────────────
+maintenanceService:
+  enabled: true
+  image:
+    repository: maintenance-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 3002
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 70
+  pdb:
+    minAvailable: 1
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Location Service ───────────────────────────────────────────────────────
+locationService:
+  enabled: true
+  image:
+    repository: localisation-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 3003
+  grpcPort: 50051
+  resources:
+    requests:
+      cpu: "150m"
+      memory: "192Mi"
+    limits:
+      cpu: "600m"
+      memory: "768Mi"
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 65
+  pdb:
+    minAvailable: 1
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Event Service ──────────────────────────────────────────────────────────
+eventService:
+  enabled: true
+  image:
+    repository: evenement-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 3004
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 70
+  pdb:
+    minAvailable: 1
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── GraphQL Gateway ────────────────────────────────────────────────────────
+gateway:
+  enabled: true
+  image:
+    repository: gestion-flotte-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 4000
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "800m"
+      memory: "1Gi"
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 70
+  pdb:
+    minAvailable: 1
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Frontend ───────────────────────────────────────────────────────────────
+frontend:
+  enabled: true
+  image:
+    repository: fleet-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 80
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+  readinessProbe:
+    path: /
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  livenessProbe:
+    path: /
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Feature Flags Service ──────────────────────────────────────────────────
+featureFlags:
+  enabled: true
+  image:
+    repository: fleet-feature-flags
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 3006
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+
+# ── Ingress ────────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  tls:
+    enabled: true
+    secretName: fleet-tls
+  hosts:
+    api: api.fleet.local
+    auth: auth.fleet.local
+    monitoring: monitoring.fleet.local
+    app: app.fleet.local
+
+# ── Network Policies ───────────────────────────────────────────────────────
+networkPolicy:
+  enabled: true
+
+# ── ServiceAccount ─────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# ── Pod Security ───────────────────────────────────────────────────────────
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+  capabilities:
+    drop:
+      - ALL

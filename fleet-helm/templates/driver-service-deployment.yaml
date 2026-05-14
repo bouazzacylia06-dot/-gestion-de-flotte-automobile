@@ -1,0 +1,90 @@
+{{- if .Values.driverService.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: driver-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: driver-service
+    app.kubernetes.io/component: microservice
+spec:
+  replicas: {{ .Values.driverService.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: driver-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: driver-service
+        app.kubernetes.io/component: microservice
+        app.kubernetes.io/part-of: fleet-management
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.driverService.port | quote }}
+        prometheus.io/path: "/metrics"
+    spec:
+      {{- include "fleet.podSecurityContext" . | nindent 6 }}
+      serviceAccountName: {{ include "fleet.serviceAccountName" . }}
+      containers:
+        - name: driver-service
+          image: "{{ .Values.driverService.image.repository }}:{{ .Values.driverService.image.tag }}"
+          imagePullPolicy: {{ .Values.driverService.image.pullPolicy | default .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.driverService.port }}
+              protocol: TCP
+          {{- include "fleet.securityContext" . | nindent 10 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "fleet.configmapName" . }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "driver-service"
+            - name: PORT
+              value: {{ .Values.driverService.port | quote }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet.postgresSecretName" . }}
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet.postgresSecretName" . }}
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: {{ .Values.driverService.resources.requests.cpu | quote }}
+              memory: {{ .Values.driverService.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.driverService.resources.limits.cpu | quote }}
+              memory: {{ .Values.driverService.resources.limits.memory | quote }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.driverService.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.driverService.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.driverService.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.driverService.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.driverService.readinessProbe.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.driverService.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.driverService.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.driverService.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.driverService.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.driverService.livenessProbe.failureThreshold }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

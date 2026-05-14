@@ -1,0 +1,90 @@
+{{- if .Values.maintenanceService.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maintenance-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: maintenance-service
+    app.kubernetes.io/component: microservice
+spec:
+  replicas: {{ .Values.maintenanceService.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: maintenance-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: maintenance-service
+        app.kubernetes.io/component: microservice
+        app.kubernetes.io/part-of: fleet-management
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.maintenanceService.port | quote }}
+        prometheus.io/path: "/metrics"
+    spec:
+      {{- include "fleet.podSecurityContext" . | nindent 6 }}
+      serviceAccountName: {{ include "fleet.serviceAccountName" . }}
+      containers:
+        - name: maintenance-service
+          image: "{{ .Values.maintenanceService.image.repository }}:{{ .Values.maintenanceService.image.tag }}"
+          imagePullPolicy: {{ .Values.maintenanceService.image.pullPolicy | default .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.maintenanceService.port }}
+              protocol: TCP
+          {{- include "fleet.securityContext" . | nindent 10 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "fleet.configmapName" . }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "maintenance-service"
+            - name: PORT
+              value: {{ .Values.maintenanceService.port | quote }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet.postgresSecretName" . }}
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet.postgresSecretName" . }}
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: {{ .Values.maintenanceService.resources.requests.cpu | quote }}
+              memory: {{ .Values.maintenanceService.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.maintenanceService.resources.limits.cpu | quote }}
+              memory: {{ .Values.maintenanceService.resources.limits.memory | quote }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.maintenanceService.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.maintenanceService.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.maintenanceService.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.maintenanceService.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.maintenanceService.readinessProbe.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.maintenanceService.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.maintenanceService.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.maintenanceService.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.maintenanceService.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.maintenanceService.livenessProbe.failureThreshold }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

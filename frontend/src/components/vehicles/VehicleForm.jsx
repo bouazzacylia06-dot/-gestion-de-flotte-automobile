@@ -34,12 +34,12 @@ export default function VehicleForm({ initial, onSubmit, onCancel, loading, erro
     onSubmit(form);
   };
 
-  const inputCls = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all';
+  const inputCls = 'w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/40 transition-all placeholder:text-slate-500';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+        <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
           Immatriculation *
         </label>
         <input
@@ -53,7 +53,7 @@ export default function VehicleForm({ initial, onSubmit, onCancel, loading, erro
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Marque *</label>
+          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Marque *</label>
           <input
             name="marque"
             value={form.marque}
@@ -64,7 +64,7 @@ export default function VehicleForm({ initial, onSubmit, onCancel, loading, erro
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Modèle *</label>
+          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Modèle *</label>
           <input
             name="modele"
             value={form.modele}
@@ -76,7 +76,7 @@ export default function VehicleForm({ initial, onSubmit, onCancel, loading, erro
         </div>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Statut *</label>
+        <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Statut *</label>
         <select name="statut" value={form.statut} onChange={handleChange} className={inputCls}>
           {STATUTS.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
@@ -85,7 +85,7 @@ export default function VehicleForm({ initial, onSubmit, onCancel, loading, erro
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-center gap-2">
           <span>⚠️</span> {error}
         </div>
       )}
@@ -94,7 +94,7 @@ export default function VehicleForm({ initial, onSubmit, onCancel, loading, erro
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+          className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition-all flex items-center justify-center gap-2"
         >
           {loading && (
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -104,7 +104,7 @@ export default function VehicleForm({ initial, onSubmit, onCancel, loading, erro
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl text-sm transition-all"
+          className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-2.5 rounded-xl text-sm transition-all"
         >
           Annuler
         </button>

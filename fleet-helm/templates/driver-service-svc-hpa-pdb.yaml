@@ -1,0 +1,59 @@
+{{- if .Values.driverService.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: driver-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: driver-service
+    app.kubernetes.io/component: microservice
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: driver-service
+  ports:
+    - name: http
+      port: {{ .Values.driverService.port }}
+      targetPort: http
+      protocol: TCP
+---
+{{- if .Values.driverService.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: driver-service-hpa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: driver-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: driver-service
+  minReplicas: {{ .Values.driverService.hpa.minReplicas }}
+  maxReplicas: {{ .Values.driverService.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.driverService.hpa.cpuUtilization }}
+---
+{{- end }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: driver-service-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: driver-service
+spec:
+  minAvailable: {{ .Values.driverService.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: driver-service
+{{- end }}

@@ -15,7 +15,11 @@ const jwksClient = jwksRsa({
 const getSigningKey = (header, callback) => {
   jwksClient.getSigningKey(header.kid, (err, key) => {
     if (err) return callback(err);
-    callback(null, key.getPublicKey());
+    try {
+      callback(null, key.getPublicKey());
+    } catch (e) {
+      callback(e);
+    }
   });
 };
 
@@ -25,13 +29,18 @@ const authenticate = (req, res, next) => {
     return res.status(401).json({ message: 'Token d\'authentification manquant' });
   }
 
-  const token = authHeader.split(' ')[1];
+  // substring(7) = everything after "Bearer " ; trim() guards against accidental whitespace
+  const token = authHeader.substring(7).trim();
+  if (!token) {
+    return res.status(401).json({ message: 'Token d\'authentification manquant' });
+  }
 
   jwt.verify(token, getSigningKey, { algorithms: ['RS256'] }, (err, decoded) => {
     if (err) {
       return res.status(401).json({ message: 'Token invalide ou expiré', error: err.message });
     }
-    req.user = decoded;
+    req.user  = decoded;
+    req.auth  = decoded; // alias pour req.auth?.realm_access?.roles
     req.userRoles = decoded.realm_access?.roles || [];
     return next();
   });

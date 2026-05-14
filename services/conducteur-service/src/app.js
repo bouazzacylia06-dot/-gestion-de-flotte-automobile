@@ -14,16 +14,16 @@ app.use(cors());
 app.use(httpMetricsMiddleware);
 
 const SEED_CONDUCTEURS = [
-  { id: 'c1000000-0001-4000-b000-000000000001', nom: 'Martin',    prenom: 'Julien',    numeroPermis: '07-0512-0001', statut: 'actif' },
-  { id: 'c1000000-0001-4000-b000-000000000002', nom: 'Dupont',    prenom: 'Sophie',    numeroPermis: '07-0512-0002', statut: 'actif' },
-  { id: 'c1000000-0001-4000-b000-000000000003', nom: 'Bernard',   prenom: 'Thomas',    numeroPermis: '07-0512-0003', statut: 'actif' },
-  { id: 'c1000000-0001-4000-b000-000000000004', nom: 'Leclerc',   prenom: 'Marie',     numeroPermis: '07-0512-0004', statut: 'actif' },
-  { id: 'c1000000-0001-4000-b000-000000000005', nom: 'Moreau',    prenom: 'Pierre',    numeroPermis: '07-0512-0005', statut: 'actif' },
-  { id: 'c1000000-0001-4000-b000-000000000006', nom: 'Simon',     prenom: 'Claire',    numeroPermis: '07-0512-0006', statut: 'inactif' },
-  { id: 'c1000000-0001-4000-b000-000000000007', nom: 'Laurent',   prenom: 'Antoine',   numeroPermis: '07-0512-0007', statut: 'actif' },
-  { id: 'c1000000-0001-4000-b000-000000000008', nom: 'Petit',     prenom: 'Isabelle',  numeroPermis: '07-0512-0008', statut: 'actif' },
-  { id: 'c1000000-0001-4000-b000-000000000009', nom: 'Garcia',    prenom: 'Nicolas',   numeroPermis: '07-0512-0009', statut: 'suspendu' },
-  { id: 'c1000000-0001-4000-b000-000000000010', nom: 'Roux',      prenom: 'Camille',   numeroPermis: '07-0512-0010', statut: 'actif' },
+  { id: 'c1000000-0001-4000-b000-000000000001', nom: 'Martin',    prenom: 'Julien',    numeroPermis: '07-0512-0001', statut: 'actif',    vehiculeId: null, dateExpirationPermis: '2027-12-31' },
+  { id: 'c1000000-0001-4000-b000-000000000002', nom: 'Dupont',    prenom: 'Sophie',    numeroPermis: '07-0512-0002', statut: 'actif',    vehiculeId: null, dateExpirationPermis: '2027-12-31' },
+  { id: 'c1000000-0001-4000-b000-000000000003', nom: 'Bernard',   prenom: 'Thomas',    numeroPermis: '07-0512-0003', statut: 'actif',    vehiculeId: null, dateExpirationPermis: '2027-12-31' },
+  { id: 'c1000000-0001-4000-b000-000000000004', nom: 'Leclerc',   prenom: 'Marie',     numeroPermis: '07-0512-0004', statut: 'actif',    vehiculeId: null, dateExpirationPermis: '2027-12-31' },
+  { id: 'c1000000-0001-4000-b000-000000000005', nom: 'Moreau',    prenom: 'Pierre',    numeroPermis: '07-0512-0005', statut: 'actif',    vehiculeId: null, dateExpirationPermis: '2027-12-31' },
+  { id: 'c1000000-0001-4000-b000-000000000006', nom: 'Simon',     prenom: 'Claire',    numeroPermis: '07-0512-0006', statut: 'inactif',  vehiculeId: null, dateExpirationPermis: '2027-12-31' },
+  { id: 'c1000000-0001-4000-b000-000000000007', nom: 'Laurent',   prenom: 'Antoine',   numeroPermis: '07-0512-0007', statut: 'actif',    vehiculeId: null, dateExpirationPermis: '2027-12-31' },
+  { id: 'c1000000-0001-4000-b000-000000000008', nom: 'Petit',     prenom: 'Isabelle',  numeroPermis: '07-0512-0008', statut: 'actif',    vehiculeId: null, dateExpirationPermis: '2027-12-31' },
+  { id: 'c1000000-0001-4000-b000-000000000009', nom: 'Garcia',    prenom: 'Nicolas',   numeroPermis: '07-0512-0009', statut: 'suspendu', vehiculeId: null, dateExpirationPermis: '2023-06-15' },
+  { id: 'c1000000-0001-4000-b000-000000000010', nom: 'Roux',      prenom: 'Camille',   numeroPermis: '07-0512-0010', statut: 'actif',    vehiculeId: null, dateExpirationPermis: '2027-12-31' },
 ];
 const conducteurs = new Map(SEED_CONDUCTEURS.map((c) => [c.id, c]));
 
@@ -32,7 +32,8 @@ const isValidPayload = (body) =>
   typeof body.nom === 'string' && body.nom.trim().length > 0 &&
   typeof body.prenom === 'string' && body.prenom.trim().length > 0 &&
   typeof body.numeroPermis === 'string' && body.numeroPermis.trim().length > 0 &&
-  typeof body.statut === 'string' && ['actif', 'inactif', 'suspendu'].includes(body.statut);
+  typeof body.statut === 'string' && ['actif', 'inactif', 'suspendu'].includes(body.statut) &&
+  (body.dateExpirationPermis === undefined || (typeof body.dateExpirationPermis === 'string' && !isNaN(Date.parse(body.dateExpirationPermis))));
 
 app.get('/', (_req, res) => {
   res.send('Service Conducteur - Microservice de gestion des conducteurs');
@@ -64,6 +65,8 @@ app.post('/conducteurs', authenticate, requireRole('admin', 'manager'), (req, re
     prenom: req.body.prenom.trim(),
     numeroPermis: req.body.numeroPermis.trim(),
     statut: req.body.statut,
+    vehiculeId: req.body.vehiculeId || null,
+    dateExpirationPermis: req.body.dateExpirationPermis || null,
   };
   conducteurs.set(conducteur.id, conducteur);
   recordUserCreated('conducteur');
@@ -71,7 +74,8 @@ app.post('/conducteurs', authenticate, requireRole('admin', 'manager'), (req, re
 });
 
 app.put('/conducteurs/:id', authenticate, requireRole('admin', 'manager'), (req, res) => {
-  if (!conducteurs.has(req.params.id)) return res.status(404).json({ message: 'Conducteur not found' });
+  const existing = conducteurs.get(req.params.id);
+  if (!existing) return res.status(404).json({ message: 'Conducteur not found' });
   if (!isValidPayload(req.body)) {
     return res.status(400).json({ message: 'Payload invalide', errors: ['nom, prenom, numeroPermis (string) et statut (actif|inactif|suspendu) requis'] });
   }
@@ -81,7 +85,24 @@ app.put('/conducteurs/:id', authenticate, requireRole('admin', 'manager'), (req,
     prenom: req.body.prenom.trim(),
     numeroPermis: req.body.numeroPermis.trim(),
     statut: req.body.statut,
+    vehiculeId: req.body.vehiculeId !== undefined ? (req.body.vehiculeId || null) : existing.vehiculeId,
+    dateExpirationPermis: req.body.dateExpirationPermis !== undefined ? (req.body.dateExpirationPermis || null) : existing.dateExpirationPermis,
   };
+  conducteurs.set(req.params.id, updated);
+  return res.status(200).json(updated);
+});
+
+app.patch('/conducteurs/:id/assign', authenticate, requireRole('admin', 'manager'), (req, res) => {
+  const conducteur = conducteurs.get(req.params.id);
+  if (!conducteur) return res.status(404).json({ message: 'Conducteur not found' });
+  if (conducteur.statut === 'suspendu') {
+    return res.status(422).json({ message: 'Assignation impossible — conducteur suspendu' });
+  }
+  if (conducteur.dateExpirationPermis && new Date(conducteur.dateExpirationPermis) < new Date()) {
+    return res.status(422).json({ message: 'Assignation impossible — permis expiré', expiredAt: conducteur.dateExpirationPermis });
+  }
+  const vehiculeId = req.body.vehiculeId ?? null;
+  const updated = { ...conducteur, vehiculeId };
   conducteurs.set(req.params.id, updated);
   return res.status(200).json(updated);
 });
@@ -96,6 +117,10 @@ app.delete('/conducteurs/:id', authenticate, requireRole('admin'), (req, res) =>
 app.use((_req, res) => res.status(404).json({ message: 'Route not found' }));
 app.use((err, _req, res, _next) => res.status(err.status || 500).json({ message: err.message || 'Internal server error' }));
 
-app.listen(port, () => {
-  console.log(`Service Conducteur démarré sur le port ${port}`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Service Conducteur démarré sur le port ${port}`);
+  });
+}
+
+module.exports = { app };

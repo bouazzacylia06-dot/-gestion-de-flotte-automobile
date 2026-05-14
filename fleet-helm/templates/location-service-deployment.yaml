@@ -1,0 +1,95 @@
+{{- if .Values.locationService.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: location-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: location-service
+    app.kubernetes.io/component: microservice
+spec:
+  replicas: {{ .Values.locationService.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: location-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: location-service
+        app.kubernetes.io/component: microservice
+        app.kubernetes.io/part-of: fleet-management
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.locationService.port | quote }}
+        prometheus.io/path: "/metrics"
+    spec:
+      {{- include "fleet.podSecurityContext" . | nindent 6 }}
+      serviceAccountName: {{ include "fleet.serviceAccountName" . }}
+      containers:
+        - name: location-service
+          image: "{{ .Values.locationService.image.repository }}:{{ .Values.locationService.image.tag }}"
+          imagePullPolicy: {{ .Values.locationService.image.pullPolicy | default .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.locationService.port }}
+              protocol: TCP
+            - name: grpc
+              containerPort: {{ .Values.locationService.grpcPort }}
+              protocol: TCP
+          {{- include "fleet.securityContext" . | nindent 10 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "fleet.configmapName" . }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "localisation-service"
+            - name: PORT
+              value: {{ .Values.locationService.port | quote }}
+            - name: GRPC_PORT
+              value: {{ .Values.locationService.grpcPort | quote }}
+            - name: TIMESCALEDB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet.postgresSecretName" . }}
+                  key: TIMESCALEDB_USER
+            - name: TIMESCALEDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fleet.postgresSecretName" . }}
+                  key: TIMESCALEDB_PASSWORD
+          resources:
+            requests:
+              cpu: {{ .Values.locationService.resources.requests.cpu | quote }}
+              memory: {{ .Values.locationService.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.locationService.resources.limits.cpu | quote }}
+              memory: {{ .Values.locationService.resources.limits.memory | quote }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.locationService.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.locationService.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.locationService.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.locationService.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.locationService.readinessProbe.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.locationService.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.locationService.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.locationService.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.locationService.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.locationService.livenessProbe.failureThreshold }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

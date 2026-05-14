@@ -1,0 +1,26 @@
+{{- if .Values.kafka.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/component: kafka
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/component: kafka
+  ports:
+    - name: broker
+      port: {{ .Values.kafka.port }}
+      targetPort: broker
+      protocol: TCP
+    - name: controller
+      port: {{ .Values.kafka.controllerPort }}
+      targetPort: controller
+      protocol: TCP
+{{- end }}

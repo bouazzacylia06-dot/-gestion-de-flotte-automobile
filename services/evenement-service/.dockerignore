@@ -2,5 +2,7 @@ node_modules
 npm-debug.log
 coverage
 .env
+.env.*
 *.test.js
-tests/
+__tests__
+

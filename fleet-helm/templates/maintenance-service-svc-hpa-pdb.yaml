@@ -1,0 +1,59 @@
+{{- if .Values.maintenanceService.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: maintenance-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: maintenance-service
+    app.kubernetes.io/component: microservice
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: maintenance-service
+  ports:
+    - name: http
+      port: {{ .Values.maintenanceService.port }}
+      targetPort: http
+      protocol: TCP
+---
+{{- if .Values.maintenanceService.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: maintenance-service-hpa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: maintenance-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: maintenance-service
+  minReplicas: {{ .Values.maintenanceService.hpa.minReplicas }}
+  maxReplicas: {{ .Values.maintenanceService.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.maintenanceService.hpa.cpuUtilization }}
+---
+{{- end }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: maintenance-service-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: maintenance-service
+spec:
+  minAvailable: {{ .Values.maintenanceService.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: maintenance-service
+{{- end }}

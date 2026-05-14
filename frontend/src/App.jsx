@@ -27,11 +27,11 @@ import LocalisationPage from './pages/LocalisationPage';
 
 function AppLayout({ children }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-fleet-bg flex flex-col">
       <Navbar />
       <div className="flex flex-1">
         <Sidebar />
-        <main className="flex-1 p-4 md:p-6 max-w-screen-2xl">
+        <main className="flex-1 p-4 md:p-6 max-w-screen-2xl overflow-x-hidden">
           {children}
         </main>
       </div>

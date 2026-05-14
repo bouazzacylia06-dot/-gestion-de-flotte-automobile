@@ -1,0 +1,206 @@
+# ============================================================
+# Fleet Management System — Production Overrides
+# Usage: helm upgrade --install fleet ./fleet-helm -f values-prod.yaml -n fleet-prod --atomic --timeout 5m
+# ============================================================
+
+global:
+  imagePullPolicy: Always
+  logLevel: warn
+  otel:
+    endpoint: "http://otel-collector.fleet-monitoring.svc:4318"
+  keycloak:
+    url: "http://keycloak.fleet-prod.svc:8080"
+    realm: "flotte"
+
+# ── Prod: ≥2 replicas, strict resource limits, security hardened ──────────
+postgres:
+  replicas: 1   # StatefulSet — use primary/standby HA via operator in real prod
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+  persistence:
+    size: 50Gi
+    storageClass: "fast-ssd"
+
+kafka:
+  replicas: 3
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+  persistence:
+    size: 50Gi
+    storageClass: "fast-ssd"
+
+keycloak:
+  replicas: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+
+vehicleService:
+  replicas: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    cpuUtilization: 70
+
+driverService:
+  replicas: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    cpuUtilization: 70
+
+maintenanceService:
+  replicas: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    cpuUtilization: 70
+
+locationService:
+  replicas: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "300m"
+      memory: "384Mi"
+    limits:
+      cpu: "1200m"
+      memory: "1.5Gi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    cpuUtilization: 65
+
+eventService:
+  replicas: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    cpuUtilization: 70
+
+gateway:
+  replicas: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "400m"
+      memory: "512Mi"
+    limits:
+      cpu: "1600m"
+      memory: "2Gi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    cpuUtilization: 70
+
+frontend:
+  replicas: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "400m"
+      memory: "512Mi"
+
+featureFlags:
+  replicas: 2
+
+ingress:
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+  tls:
+    enabled: true
+    secretName: fleet-tls-prod
+  hosts:
+    api: api.fleet.local
+    auth: auth.fleet.local
+    monitoring: monitoring.fleet.local
+    app: app.fleet.local
+
+networkPolicy:
+  enabled: true
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+  capabilities:
+    drop:
+      - ALL

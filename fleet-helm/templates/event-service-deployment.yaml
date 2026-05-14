@@ -1,0 +1,80 @@
+{{- if .Values.eventService.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: event-service
+    app.kubernetes.io/component: microservice
+spec:
+  replicas: {{ .Values.eventService.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: event-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: event-service
+        app.kubernetes.io/component: microservice
+        app.kubernetes.io/part-of: fleet-management
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.eventService.port | quote }}
+        prometheus.io/path: "/metrics"
+    spec:
+      {{- include "fleet.podSecurityContext" . | nindent 6 }}
+      serviceAccountName: {{ include "fleet.serviceAccountName" . }}
+      containers:
+        - name: event-service
+          image: "{{ .Values.eventService.image.repository }}:{{ .Values.eventService.image.tag }}"
+          imagePullPolicy: {{ .Values.eventService.image.pullPolicy | default .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.eventService.port }}
+              protocol: TCP
+          {{- include "fleet.securityContext" . | nindent 10 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "fleet.configmapName" . }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "evenement-service"
+            - name: PORT
+              value: {{ .Values.eventService.port | quote }}
+          resources:
+            requests:
+              cpu: {{ .Values.eventService.resources.requests.cpu | quote }}
+              memory: {{ .Values.eventService.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.eventService.resources.limits.cpu | quote }}
+              memory: {{ .Values.eventService.resources.limits.memory | quote }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.eventService.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.eventService.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.eventService.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.eventService.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.eventService.readinessProbe.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.eventService.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.eventService.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.eventService.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.eventService.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.eventService.livenessProbe.failureThreshold }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

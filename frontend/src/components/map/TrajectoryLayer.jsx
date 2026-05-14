@@ -23,28 +23,28 @@ export default function TrajectoryLayer({ vehicleId }) {
       {/* Sélecteur plage horaire */}
       <div
         style={{ position: 'absolute', top: 10, right: 10, zIndex: 1000 }}
-        className="bg-white rounded shadow p-2 flex gap-2"
+        className="bg-slate-900 border border-slate-700 rounded-lg shadow-xl p-2 flex gap-2"
       >
         {RANGES.map((r) => (
           <button
             key={r.hours}
             onClick={() => setRangeHours(r.hours)}
-            className={`text-xs px-2 py-1 rounded ${
+            className={`text-xs px-2 py-1 rounded transition-colors ${
               rangeHours === r.hours
-                ? 'bg-sky-600 text-white'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                ? 'bg-violet-600 text-white'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
             }`}
           >
             {r.label}
           </button>
         ))}
-        {loading && <span className="text-xs text-gray-400 self-center">…</span>}
+        {loading && <span className="text-xs text-slate-500 self-center">…</span>}
       </div>
 
       {positions.length > 1 && (
         <Polyline
           positions={positions}
-          pathOptions={{ color: '#0ea5e9', weight: 3, opacity: 0.8 }}
+          pathOptions={{ color: '#7c3aed', weight: 3, opacity: 0.8 }}
         />
       )}
     </>

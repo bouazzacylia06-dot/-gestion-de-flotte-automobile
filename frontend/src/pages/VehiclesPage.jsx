@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/useAuth';
+import { useTranslation } from 'react-i18next';
 import { useVehicules, useCreateVehicule, useUpdateVehicule, useDeleteVehicule } from '../hooks/useVehicles';
 import VehicleList from '../components/vehicles/VehicleList';
 import VehicleForm from '../components/vehicles/VehicleForm';
 
 function Modal({ title, icon, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md mx-4">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-white to-gray-50 rounded-t-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-fleet-card rounded-2xl shadow-2xl border border-fleet-border w-full max-w-md mx-4">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-fleet-border bg-slate-800/30 rounded-t-2xl">
           <div className="flex items-center gap-3">
             {icon && <span className="text-xl">{icon}</span>}
-            <h2 className="font-semibold text-gray-800">{title}</h2>
+            <h2 className="font-semibold text-slate-200">{title}</h2>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">✕</button>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors">✕</button>
         </div>
         <div className="px-6 py-5">{children}</div>
       </div>
@@ -26,7 +27,7 @@ function SkeletonRow() {
     <tr className="animate-pulse">
       {[1, 2, 3, 4, 5].map((i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-gray-100 rounded" />
+          <div className="h-4 bg-slate-800 rounded" />
         </td>
       ))}
     </tr>
@@ -34,6 +35,7 @@ function SkeletonRow() {
 }
 
 export default function VehiclesPage() {
+  const { t } = useTranslation();
   const { hasRole } = useAuth();
   const { vehicules, loading, error } = useVehicules();
   const { createVehicule, loading: creating, error: createError } = useCreateVehicule();
@@ -69,7 +71,7 @@ export default function VehiclesPage() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Supprimer ce véhicule définitivement ?')) {
+    if (window.confirm(t('vehicles.confirmDelete'))) {
       await deleteVehicule({ variables: { id } });
     }
   };
@@ -86,7 +88,7 @@ export default function VehiclesPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-600">
+      <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-red-400">
         Erreur : {error.message}
       </div>
     );
@@ -99,37 +101,37 @@ export default function VehiclesPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Véhicules</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {loading ? '…' : `${vehicules.length} véhicule${vehicules.length > 1 ? 's' : ''} · ${actifs} actif${actifs > 1 ? 's' : ''} · ${enMaint} en maintenance`}
+          <h1 className="text-2xl font-bold text-white">{t('vehicles.title')}</h1>
+          <p className="text-sm text-slate-400 mt-0.5">
+            {loading ? '…' : `${vehicules.length} véhicule${vehicules.length > 1 ? 's' : ''} · ${actifs} actif${actifs > 1 ? 's' : ''} · ${enMaint} ${t('vehicles.maintenance')}`}
           </p>
         </div>
         {canEdit && (
           <button
             onClick={openCreate}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all"
+            className="bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Nouveau véhicule
+            {t('vehicles.new')}
           </button>
         )}
       </div>
 
       {loading ? (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-xl border border-fleet-border bg-fleet-card shadow-card">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-slate-800/50">
               <tr>
                 {['Immatriculation', 'Marque', 'Modèle', 'Statut', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left">
-                    <div className="h-3 bg-gray-200 rounded animate-pulse w-20" />
+                    <div className="h-3 bg-slate-700 rounded animate-pulse w-20" />
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-fleet-border">
               {[1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}
             </tbody>
           </table>
@@ -145,7 +147,7 @@ export default function VehiclesPage() {
       )}
 
       {modal === 'create' && (
-        <Modal title="Nouveau véhicule" icon="🚗" onClose={() => setModal(null)}>
+        <Modal title={t('vehicles.new')} icon="🚗" onClose={() => setModal(null)}>
           <VehicleForm
             onSubmit={handleCreate}
             onCancel={() => setModal(null)}
@@ -156,7 +158,7 @@ export default function VehiclesPage() {
       )}
 
       {modal?.vehicule && (
-        <Modal title="Modifier le véhicule" icon="✏️" onClose={() => setModal(null)}>
+        <Modal title={t('vehicles.editVehicle')} icon="✏️" onClose={() => setModal(null)}>
           <VehicleForm
             initial={modal.vehicule}
             onSubmit={handleUpdate}

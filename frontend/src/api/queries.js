@@ -66,6 +66,7 @@ export const GET_CONDUCTEURS = gql`
       prenom
       numeroPermis
       statut
+      vehiculeId
     }
   }
 `;
@@ -78,6 +79,7 @@ export const GET_CONDUCTEUR = gql`
       prenom
       numeroPermis
       statut
+      vehiculeId
     }
   }
 `;
@@ -90,6 +92,7 @@ export const CREATE_CONDUCTEUR = gql`
       prenom
       numeroPermis
       statut
+      vehiculeId
     }
   }
 `;
@@ -102,6 +105,7 @@ export const UPDATE_CONDUCTEUR = gql`
       prenom
       numeroPermis
       statut
+      vehiculeId
     }
   }
 `;
@@ -109,6 +113,17 @@ export const UPDATE_CONDUCTEUR = gql`
 export const DELETE_CONDUCTEUR = gql`
   mutation DeleteConducteur($id: ID!) {
     deleteConducteur(id: $id)
+  }
+`;
+
+export const ASSIGN_VEHICULE_TO_CONDUCTEUR = gql`
+  mutation AssignVehiculeToConducteur($conducteurId: ID!, $vehiculeId: ID) {
+    assignVehiculeToConducteur(conducteurId: $conducteurId, vehiculeId: $vehiculeId) {
+      id
+      nom
+      prenom
+      vehiculeId
+    }
   }
 `;
 
@@ -231,6 +246,34 @@ export const GET_EVENEMENTS = gql`
       type
       description
       date
+    }
+  }
+`;
+
+export const GET_GEO_ALERTES = gql`
+  query GetGeoAlertes($limit: Int) {
+    geoAlertes(limit: $limit) {
+      id
+      vehicleId
+      zoneId
+      type
+      latitude
+      longitude
+      createdAt
+    }
+  }
+`;
+
+export const CREATE_GEO_ALERTE = gql`
+  mutation CreateGeoAlerte($input: GeoAlerteInput!) {
+    createGeoAlerte(input: $input) {
+      id
+      vehicleId
+      zoneId
+      type
+      latitude
+      longitude
+      createdAt
     }
   }
 `;

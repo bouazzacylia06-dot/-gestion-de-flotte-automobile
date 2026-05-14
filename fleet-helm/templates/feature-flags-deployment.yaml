@@ -1,0 +1,85 @@
+{{- if .Values.featureFlags.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feature-flags
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: feature-flags
+    app.kubernetes.io/component: feature-flags
+spec:
+  replicas: {{ .Values.featureFlags.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: feature-flags
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: feature-flags
+        app.kubernetes.io/component: feature-flags
+        app.kubernetes.io/part-of: fleet-management
+    spec:
+      serviceAccountName: {{ include "fleet.serviceAccountName" . }}
+      containers:
+        - name: feature-flags
+          image: "{{ .Values.featureFlags.image.repository }}:{{ .Values.featureFlags.image.tag }}"
+          imagePullPolicy: {{ .Values.featureFlags.image.pullPolicy | default .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.featureFlags.port }}
+              protocol: TCP
+          resources:
+            requests:
+              cpu: {{ .Values.featureFlags.resources.requests.cpu | quote }}
+              memory: {{ .Values.featureFlags.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.featureFlags.resources.limits.cpu | quote }}
+              memory: {{ .Values.featureFlags.resources.limits.memory | quote }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feature-flags
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: feature-flags
+    app.kubernetes.io/component: feature-flags
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: feature-flags
+  ports:
+    - name: http
+      port: {{ .Values.featureFlags.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

@@ -90,6 +90,18 @@ app.get('/localisations/last/:vehicleId', authenticate, async (req, res) => {
   }
 });
 
+// GET /localisations/geo-alerts?limit=50 — alertes géofencing récentes
+// DOIT être avant GET /localisations/:vehicleId pour ne pas être capté par le wildcard
+app.get('/localisations/geo-alerts', authenticate, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
+    const alerts = await repository.getRecentGeoAlerts(limit);
+    res.status(200).json(alerts);
+  } catch (err) {
+    res.status(200).json([]);
+  }
+});
+
 app.get('/localisations/:vehicleId', authenticate, async (req, res) => {
   try {
     const pos = await repository.getLastPosition(req.params.vehicleId);
@@ -131,6 +143,40 @@ app.delete('/localisations/:id', authenticate, requireRole('admin'), (_req, res)
   res.status(204).send()
 );
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// POST /localisations/geo-alerts — créer une alerte géofencing
+app.post(
+  '/localisations/geo-alerts',
+  authenticate,
+  requireRole('admin', 'manager'),
+  async (req, res) => {
+    const { vehicleId, type, zoneId, latitude, longitude } = req.body;
+    if (!vehicleId || !type) {
+      return res.status(400).json({ message: 'vehicleId et type requis' });
+    }
+    const validTypes = ['ZONE_EXIT', 'FORBIDDEN', 'SPEED'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ message: `type doit être parmi : ${validTypes.join(', ')}` });
+    }
+    // zoneId doit être un UUID valide — sinon null pour éviter l'erreur DB
+    const safeZoneId = (zoneId && UUID_REGEX.test(zoneId)) ? zoneId : null;
+    try {
+      await repository.saveGeoAlert(
+        vehicleId,
+        safeZoneId,
+        type,
+        latitude  != null ? parseFloat(latitude)  : null,
+        longitude != null ? parseFloat(longitude) : null
+      );
+      const alerts = await repository.getRecentGeoAlerts(1);
+      return res.status(201).json(alerts[0] || { vehicleId, type, zoneId: safeZoneId, latitude, longitude, createdAt: new Date().toISOString() });
+    } catch (err) {
+      return res.status(500).json({ message: err.message });
+    }
+  }
+);
+
 app.use((_req, res) => res.status(404).json({ message: 'Route not found' }));
 app.use((err, _req, res, _next) =>
   res.status(err.status || 500).json({ message: err.message || 'Internal server error' })
@@ -153,6 +199,50 @@ function createGrpcServer() {
   });
 
   return server;
+}
+
+// =============================================================================
+// Seed initial GPS positions for the 20 fleet vehicles (runs once if DB empty)
+// =============================================================================
+const SEED_VEHICLE_IDS = Array.from({ length: 20 }, (_, i) =>
+  `11000000-0000-4000-a000-${String(i + 1).padStart(12, '0')}`
+);
+
+async function seedPositionsIfEmpty() {
+  try {
+    const { rows } = await require('./config/database').query(
+      `SELECT COUNT(*) FROM service_localisation.positions`
+    );
+    if (parseInt(rows[0].count, 10) > 0) return;
+
+    const CENTER_LAT = 49.4175;
+    const CENTER_LON = 1.0575;
+    const RADIUS = 0.018;
+    const now = Date.now();
+
+    for (let i = 0; i < SEED_VEHICLE_IDS.length; i++) {
+      const angle = (i * 2 * Math.PI) / SEED_VEHICLE_IDS.length;
+      await repository.savePosition({
+        vehicleId:     SEED_VEHICLE_IDS[i],
+        latitude:      CENTER_LAT + RADIUS * Math.cos(angle),
+        longitude:     CENTER_LON + RADIUS * Math.sin(angle),
+        speed:         Math.round(20 + Math.random() * 60),
+        heading:       Math.round((i * 18) % 360),
+        timestamp:     now - i * 30000,
+        correlationId: `seed-init-${i + 1}`,
+      });
+    }
+    console.log(JSON.stringify({
+      level: 'INFO', service: 'localisation-service',
+      message: '[Seed] 20 positions initiales insérées pour la démo',
+    }));
+  } catch (err) {
+    console.warn(JSON.stringify({
+      level: 'WARN', service: 'localisation-service',
+      message: '[Seed] Positions initiales non insérées (non bloquant)',
+      error: err.message,
+    }));
+  }
 }
 
 // =============================================================================
@@ -189,11 +279,13 @@ async function bootstrap() {
   });
 
   // 3. Démarrage serveur HTTP
-  app.listen(HTTP_PORT, () => {
+  app.listen(HTTP_PORT, async () => {
     console.log(JSON.stringify({
       level:   'INFO', service: 'localisation-service',
       message: `[HTTP] Service Localisation démarré sur le port ${HTTP_PORT}`,
     }));
+    // 4. Seed positions de démo si la DB est vide
+    await seedPositionsIfEmpty();
   });
 
   // 4. Graceful shutdown (Docker envoie SIGTERM avant SIGKILL)

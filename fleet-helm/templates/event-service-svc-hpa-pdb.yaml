@@ -1,0 +1,59 @@
+{{- if .Values.eventService.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: event-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: event-service
+    app.kubernetes.io/component: microservice
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: event-service
+  ports:
+    - name: http
+      port: {{ .Values.eventService.port }}
+      targetPort: http
+      protocol: TCP
+---
+{{- if .Values.eventService.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: event-service-hpa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: event-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: event-service
+  minReplicas: {{ .Values.eventService.hpa.minReplicas }}
+  maxReplicas: {{ .Values.eventService.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.eventService.hpa.cpuUtilization }}
+---
+{{- end }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: event-service-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: event-service
+spec:
+  minAvailable: {{ .Values.eventService.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: event-service
+{{- end }}

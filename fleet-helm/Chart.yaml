@@ -1,0 +1,19 @@
+apiVersion: v2
+name: fleet-helm
+description: Production-grade Helm chart for the Vehicle Fleet Management System (University of Rouen — M1 GIL)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - fleet
+  - microservices
+  - kafka
+  - graphql
+  - keycloak
+home: https://github.com/CyliaBouazza/gestion-de-flotte-automobile
+maintainers:
+  - name: Cylia Bouazza
+    email: bouazzacylia06@gmail.com
+dependencies: []
+annotations:
+  category: MicroserviceApplication

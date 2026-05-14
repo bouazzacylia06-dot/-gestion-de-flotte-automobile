@@ -18,7 +18,7 @@ export default function VehicleDetailPage() {
   if (vLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-10 h-10 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -32,19 +32,19 @@ export default function VehicleDetailPage() {
       {/* En-tête */}
       <div className="flex items-start justify-between">
         <div>
-          <Link to="/vehicles" className="text-sm text-sky-600 hover:underline mb-1 block">
+          <Link to="/vehicles" className="text-sm text-violet-400 hover:text-violet-300 mb-1 block transition-colors">
             ← Retour aux véhicules
           </Link>
-          <h1 className="text-2xl font-bold text-gray-800">
+          <h1 className="text-2xl font-bold text-white">
             {vehicule?.immatriculation}
           </h1>
-          <p className="text-gray-500">{vehicule?.marque} {vehicule?.modele} — {vehicule?.statut}</p>
+          <p className="text-slate-400">{vehicule?.marque} {vehicule?.modele} — {vehicule?.statut}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Carte */}
-        <div className="lg:col-span-2 rounded-xl overflow-hidden shadow" style={{ height: '450px' }}>
+        <div className="lg:col-span-2 rounded-xl overflow-hidden shadow-card border border-slate-800" style={{ height: '450px' }}>
           <MapContainer center={center} zoom={14} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               attribution='&copy; OpenStreetMap'
@@ -56,21 +56,21 @@ export default function VehicleDetailPage() {
         </div>
 
         {/* Panneau historique */}
-        <div className="bg-white rounded-xl border p-4 overflow-auto" style={{ maxHeight: '450px' }}>
-          <h3 className="font-semibold text-gray-700 mb-3">Historique (1h)</h3>
+        <div className="bg-fleet-card rounded-xl border border-fleet-border p-4 overflow-auto" style={{ maxHeight: '450px' }}>
+          <h3 className="font-semibold text-slate-200 mb-3">Historique (1h)</h3>
           {history.length === 0 ? (
-            <p className="text-sm text-gray-400">Aucune position enregistrée</p>
+            <p className="text-sm text-slate-500">Aucune position enregistrée</p>
           ) : (
             <ul className="space-y-2 text-xs">
               {history.slice().reverse().map((p) => (
-                <li key={p.id} className="border-b pb-2">
-                  <p className="font-mono text-gray-600">
+                <li key={p.id} className="border-b border-fleet-border pb-2">
+                  <p className="font-mono text-slate-400">
                     {p.latitude.toFixed(5)}, {p.longitude.toFixed(5)}
                   </p>
                   {p.speed != null && (
-                    <p className="text-gray-400">{Math.round(p.speed)} km/h</p>
+                    <p className="text-slate-500">{Math.round(p.speed)} km/h</p>
                   )}
-                  <p className="text-gray-400">
+                  <p className="text-slate-500">
                     {new Date(p.timestamp).toLocaleTimeString('fr-FR')}
                   </p>
                 </li>
@@ -79,11 +79,11 @@ export default function VehicleDetailPage() {
           )}
 
           {position && (
-            <div className="mt-4 bg-sky-50 rounded-lg p-3 text-xs">
-              <p className="font-semibold text-sky-700 mb-1">Dernière position</p>
-              <p>{position.latitude.toFixed(5)}, {position.longitude.toFixed(5)}</p>
-              {position.speed != null && <p>{Math.round(position.speed)} km/h</p>}
-              <p className="text-gray-400">
+            <div className="mt-4 bg-violet-500/10 border border-violet-500/20 rounded-lg p-3 text-xs">
+              <p className="font-semibold text-violet-400 mb-1">Dernière position</p>
+              <p className="text-slate-300">{position.latitude.toFixed(5)}, {position.longitude.toFixed(5)}</p>
+              {position.speed != null && <p className="text-slate-400">{Math.round(position.speed)} km/h</p>}
+              <p className="text-slate-500">
                 {new Date(position.timestamp).toLocaleString('fr-FR')}
               </p>
             </div>

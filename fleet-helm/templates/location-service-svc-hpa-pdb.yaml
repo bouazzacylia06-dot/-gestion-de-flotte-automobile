@@ -1,0 +1,63 @@
+{{- if .Values.locationService.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: location-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: location-service
+    app.kubernetes.io/component: microservice
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: location-service
+  ports:
+    - name: http
+      port: {{ .Values.locationService.port }}
+      targetPort: http
+      protocol: TCP
+    - name: grpc
+      port: {{ .Values.locationService.grpcPort }}
+      targetPort: grpc
+      protocol: TCP
+---
+{{- if .Values.locationService.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: location-service-hpa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: location-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: location-service
+  minReplicas: {{ .Values.locationService.hpa.minReplicas }}
+  maxReplicas: {{ .Values.locationService.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.locationService.hpa.cpuUtilization }}
+---
+{{- end }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: location-service-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fleet.serviceLabels" . | nindent 4 }}
+    app.kubernetes.io/name: location-service
+spec:
+  minAvailable: {{ .Values.locationService.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: location-service
+{{- end }}

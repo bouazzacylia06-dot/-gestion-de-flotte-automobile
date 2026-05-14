@@ -24,6 +24,9 @@ services:
     image:
       repository: vehicule-service
       tag: latest
+    ingress:
+      enabled: true
+      host: vehicule.local
     resources:
       requests:
         cpu: "100m"
@@ -31,6 +34,11 @@ services:
       limits:
         cpu: "200m"
         memory: "256Mi"
+    hpa:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 5
+      cpuUtilization: 70
 
   conducteur:
     enabled: true
@@ -42,6 +50,9 @@ services:
     image:
       repository: conducteur-service
       tag: latest
+    ingress:
+      enabled: true
+      host: conducteur.local
     resources:
       requests:
         cpu: "100m"
@@ -49,6 +60,11 @@ services:
       limits:
         cpu: "200m"
         memory: "256Mi"
+    hpa:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 5
+      cpuUtilization: 70
 
   maintenance:
     enabled: true
@@ -60,6 +76,9 @@ services:
     image:
       repository: maintenance-service
       tag: latest
+    ingress:
+      enabled: true
+      host: maintenance.local
     resources:
       requests:
         cpu: "100m"
@@ -67,6 +86,11 @@ services:
       limits:
         cpu: "200m"
         memory: "256Mi"
+    hpa:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 4
+      cpuUtilization: 75
 
   localisation:
     enabled: true
@@ -78,13 +102,21 @@ services:
     image:
       repository: localisation-service
       tag: latest
+    ingress:
+      enabled: true
+      host: localisation.local
     resources:
       requests:
-        cpu: "100m"
-        memory: "128Mi"
+        cpu: "150m"
+        memory: "192Mi"
       limits:
-        cpu: "200m"
-        memory: "256Mi"
+        cpu: "300m"
+        memory: "384Mi"
+    hpa:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 6
+      cpuUtilization: 65
 
   evenement:
     enabled: true
@@ -96,6 +128,9 @@ services:
     image:
       repository: evenement-service
       tag: latest
+    ingress:
+      enabled: true
+      host: evenement.local
     resources:
       requests:
         cpu: "100m"
@@ -103,3 +138,8 @@ services:
       limits:
         cpu: "200m"
         memory: "256Mi"
+    hpa:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 4
+      cpuUtilization: 75
